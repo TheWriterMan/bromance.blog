@@ -13,12 +13,11 @@ import SearchBar from './blog/search-bar';
 import TagCloud from './blog/tag-cloud';
 
 interface BlogProps {
-  onEnterCMS?: () => void;
   initialCategory?: string;
   initialTag?: string;
 }
 
-export default function Blog({ onEnterCMS, initialCategory, initialTag }: BlogProps) {
+export default function Blog({ initialCategory, initialTag }: BlogProps) {
   const [posts, setPosts] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +90,6 @@ export default function Blog({ onEnterCMS, initialCategory, initialTag }: BlogPr
     <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 selection:bg-red-950 selection:text-white font-sans" id="blog-screen-container">
       {/* Editorial Header */}
       <BlogHeader 
-        onEnterCMS={onEnterCMS} 
         onResetFilters={handleResetFilters} 
       />
 

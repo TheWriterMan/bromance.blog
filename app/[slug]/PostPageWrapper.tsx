@@ -7,7 +7,7 @@ import BlogHeader from '@/components/blog/blog-header';
 export default function PostPageWrapper({ post }: { post: any }) {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 font-sans selection:bg-red-950 selection:text-white">
-      <BlogHeader onEnterCMS={() => { window.location.href = '/?cms=true'; }} onResetFilters={() => { window.location.href = '/'; }} />
+      <BlogHeader onResetFilters={() => { window.location.href = '/'; }} />
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12">
         <PostDetail 
           post={post} 

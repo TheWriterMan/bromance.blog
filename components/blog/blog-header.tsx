@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { PenTool } from 'lucide-react';
 
 interface BlogHeaderProps {
-  onEnterCMS?: () => void;
   onResetFilters: () => void;
 }
 
-export default function BlogHeader({ onEnterCMS, onResetFilters }: BlogHeaderProps) {
+export default function BlogHeader({ onResetFilters }: BlogHeaderProps) {
   return (
     <header className="border-b border-stone-200 sticky top-0 bg-stone-50/90 backdrop-blur-md z-45" id="blog-header">
       <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -21,15 +21,15 @@ export default function BlogHeader({ onEnterCMS, onResetFilters }: BlogHeaderPro
         </button>
 
         <div className="flex items-center space-x-3">
-          <button
-            onClick={onEnterCMS}
-            className="inline-flex items-center space-x-2 px-4 py-2 border border-stone-300 hover:border-stone-400 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-500 rounded text-xs font-serif uppercase tracking-widest text-stone-800 transition-all cursor-pointer"
+          <Link
+            href="/cms"
+            className="inline-flex items-center space-x-2 px-4 py-2 border border-stone-300 hover:border-stone-400 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-500 rounded text-xs font-serif uppercase tracking-widest text-stone-800 transition-all"
             id="btn-cms-admin"
             aria-label="Open Editor Panel"
           >
             <PenTool className="h-3.5 w-3.5 text-stone-500" />
             <span>Journal Desk</span>
-          </button>
+          </Link>
         </div>
       </div>
     </header>
