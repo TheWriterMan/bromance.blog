@@ -41,3 +41,11 @@ Vercel pulls the commit from GitHub and builds on their infrastructure.
 ## Workflow file
 
 See `.github/workflows/deploy.yml` — reference implementation with HTTP status checking.
+
+
+
+---
+
+## Database Rules
+
+**NEVER touch, modify, seed, reset, migrate, or alter the Supabase database.** The data is there and correct. If something doesn't display, the problem is ALWAYS in the app code (API routes, queries, components) — never the database. Do not run migration scripts, seed scripts, or any write operations against the production database without explicit user instruction.
