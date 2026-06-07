@@ -17,7 +17,10 @@ import BubbleMenu from './bubble-menu';
 import FloatingInsert from './floating-insert';
 import EditorHeader from './editor-header';
 import SettingsPanel from './settings-panel';
+import RecoveryPrompt from './recovery-prompt';
+import OfflineIndicator from './offline-indicator';
 import { createSlashCommandsExtension } from './slash-menu';
+import { saveDraft, getDraft, deleteDraft, DraftData } from '@/lib/draft-store';
 
 // ---- Upload helper ----
 async function uploadFileToCloudinary(file: File): Promise<{ url: string; cloudinary_id: string } | null> {
@@ -178,6 +181,9 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   const [loading, setLoading] = useState(true);
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [recoveryDraft, setRecoveryDraft] = useState<DraftData | null>(null);
+  const [lastServerSave, setLastServerSave] = useState<number>(0); // timestamp of last successful save
+  const [isDirty, setIsDirty] = useState(false);
 
   const titleRef = useRef<HTMLDivElement>(null);
 
@@ -222,6 +228,9 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       if (!res.ok) throw new Error('Save failed');
       setSlug(cleanSlug);
       setSavingState('saved');
+      setIsDirty(false);
+      setLastServerSave(Date.now());
+      deleteDraft(postId).catch(() => {});
       setTimeout(() => setSavingState('idle'), 2000);
     } catch {
       setSavingState('error');
@@ -365,6 +374,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           setCanonicalUrl(post.canonical_url || '');
           setNoindex(post.noindex || 0);
           setOgImage(post.ogImage || '');
+          setLastServerSave(post.updated_at ? new Date(post.updated_at).getTime() : Date.now());
         }
 
         if (revsRes.ok) {
@@ -398,14 +408,88 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
-  // Autosave for drafts
+  // Autosave — all statuses, debounced 5s server save
   useEffect(() => {
-    if (loading || status !== 'draft') return;
+    if (loading) return;
+    setIsDirty(true);
     const timer = setTimeout(() => {
-      savePost(true);
+      if (navigator.onLine) {
+        savePost(true);
+      }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [savePost, loading, status, content, title, summary]);
+  }, [savePost, loading, content, title, summary]);
+
+  // IndexedDB local persistence — debounced 1s
+  useEffect(() => {
+    if (loading) return;
+    const timer = setTimeout(() => {
+      const draftData: DraftData = {
+        title, content, summary, status, categoryId,
+        tags: selectedTagIds, featuredImage, slug,
+        savedAt: Date.now(),
+      };
+      saveDraft(postId, draftData).catch(() => {});
+    }, 1000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, title, content, summary, status, categoryId, selectedTagIds, featuredImage, slug, postId]);
+
+  // beforeunload handler
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isDirty) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  // Offline retry: when coming back online, flush a save
+  useEffect(() => {
+    function handleOnline() {
+      if (isDirty) {
+        savePost(true);
+      }
+    }
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [isDirty, savePost]);
+
+  // Recovery check on mount
+  useEffect(() => {
+    if (loading) return;
+    getDraft(postId).then((draft) => {
+      if (draft && draft.savedAt > lastServerSave) {
+        setRecoveryDraft(draft);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  function handleRestore() {
+    if (!recoveryDraft) return;
+    setTitle(recoveryDraft.title);
+    setContent(recoveryDraft.content);
+    setSummary(recoveryDraft.summary);
+    setSlug(recoveryDraft.slug);
+    setCategoryId(recoveryDraft.categoryId);
+    setSelectedTagIds(recoveryDraft.tags);
+    setFeaturedImage(recoveryDraft.featuredImage);
+    if (tipTapEditor) {
+      tipTapEditor.commands.setContent(recoveryDraft.content, { emitUpdate: false });
+    }
+    if (titleRef.current) {
+      titleRef.current.textContent = recoveryDraft.title;
+    }
+    setRecoveryDraft(null);
+  }
+
+  function handleDiscardRecovery() {
+    deleteDraft(postId).catch(() => {});
+    setRecoveryDraft(null);
+  }
 
   // Revision restore
   async function restoreRevision(revisionId: string) {
@@ -460,6 +544,18 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
+      {/* Recovery prompt */}
+      {recoveryDraft && (
+        <RecoveryPrompt
+          savedAt={recoveryDraft.savedAt}
+          onRestore={handleRestore}
+          onDiscard={handleDiscardRecovery}
+        />
+      )}
+
+      {/* Offline indicator */}
+      <OfflineIndicator />
+
       <EditorHeader
         title={title}
         savingState={savingState}
