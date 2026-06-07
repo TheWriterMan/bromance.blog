@@ -4,11 +4,10 @@ import React from 'react';
 import Logo from '@/components/ui/logo';
 
 interface CmsHeaderProps {
-  onSeedDatabase: () => void;
   onExitCMS: () => void;
 }
 
-export default function CmsHeader({ onSeedDatabase, onExitCMS }: CmsHeaderProps) {
+export default function CmsHeader({ onExitCMS }: CmsHeaderProps) {
   return (
     <header className="bg-stone-50 border-b-2 border-stone-200 px-6 h-16 flex items-center justify-between sticky top-0 z-40" id="cms-header">
       <div className="flex items-center space-x-3 text-stone-900">

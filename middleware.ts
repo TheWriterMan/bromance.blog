@@ -3,17 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip login page — it must be publicly accessible
-  if (pathname === '/cms/login') {
+  // /cms itself handles its own auth state (shows login form or redirects)
+  if (pathname === '/cms') {
     return NextResponse.next();
   }
 
-  // Check auth cookie for all /cms routes
+  // All other /cms/* routes require authentication
   const isLoggedIn = request.cookies.get('cms_logged_in')?.value === 'true';
 
   if (!isLoggedIn) {
-    const loginUrl = new URL('/cms/login', request.url);
-    return NextResponse.redirect(loginUrl);
+    const cmsUrl = new URL('/cms', request.url);
+    return NextResponse.redirect(cmsUrl);
   }
 
   return NextResponse.next();

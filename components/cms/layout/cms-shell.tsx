@@ -26,7 +26,7 @@ export default function CmsShell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     await fetch('/api/auth', { method: 'DELETE' });
-    window.location.href = '/cms/login';
+    window.location.href = '/cms';
   }
 
   return (
