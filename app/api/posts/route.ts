@@ -202,9 +202,9 @@ export async function GET(req: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fetch posts error:', error);
-    return NextResponse.json({ error: 'Failed to retrieve posts' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to retrieve posts', detail: error?.message || String(error) }, { status: 500 });
   }
 }
 
