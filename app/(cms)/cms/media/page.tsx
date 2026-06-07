@@ -29,6 +29,8 @@ export default function MediaPage() {
   const [copied, setCopied] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMedia = useCallback(async () => {
@@ -143,6 +145,26 @@ export default function MediaPage() {
     setSelectedIds(new Set());
   };
 
+  const handleReconcile = async () => {
+    setReconciling(true);
+    setReconcileResult(null);
+    try {
+      const res = await fetch('/api/media/reconcile', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setReconcileResult(`Synced ${data.reconciled} image${data.reconciled !== 1 ? 's' : ''} from posts`);
+        if (data.reconciled > 0) await fetchMedia();
+      } else {
+        setReconcileResult(data.error || 'Sync failed');
+      }
+    } catch {
+      setReconcileResult('Sync failed');
+    } finally {
+      setReconciling(false);
+      setTimeout(() => setReconcileResult(null), 4000);
+    }
+  };
+
   const copyUrl = (item: MediaItem) => {
     const url = getCloudinaryUrl(item.cloudinary_id, 'content');
     navigator.clipboard.writeText(url);
@@ -169,6 +191,16 @@ export default function MediaPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Media Library</h1>
           <div className="flex items-center gap-2">
+            {reconcileResult && (
+              <span className="text-xs text-zinc-500">{reconcileResult}</span>
+            )}
+            <button
+              onClick={handleReconcile}
+              disabled={reconciling}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
+            >
+              {reconciling ? 'Syncing…' : 'Sync from posts'}
+            </button>
             {selectionMode ? (
               <>
                 <button

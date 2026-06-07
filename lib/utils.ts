@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '';
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '';
 
 type CloudinaryPreset = 'content' | 'featured' | 'thumbnail' | 'raw';
 
@@ -23,8 +23,6 @@ export function getCloudinaryUrl(
   if (!publicId) return 'https://picsum.photos/seed/blog/800/450';
   // Already a full URL — pass through
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) return publicId;
-  // Legacy base64 — return as-is (should be migrated away)
-  if (publicId.startsWith('data:image/')) return publicId;
 
   const transforms = TRANSFORMS[preset];
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
