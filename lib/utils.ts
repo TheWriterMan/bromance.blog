@@ -23,6 +23,8 @@ export function getCloudinaryUrl(
   if (!publicId) return 'https://picsum.photos/seed/blog/800/450';
   // Already a full URL — pass through
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) return publicId;
+  // Legacy base64 data — should not exist, return placeholder
+  if (publicId.startsWith('data:')) return 'https://picsum.photos/seed/blog/800/450';
 
   const transforms = TRANSFORMS[preset];
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
