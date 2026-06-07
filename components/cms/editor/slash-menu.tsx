@@ -24,6 +24,7 @@ import {
   Minus,
   Table,
   MessageSquare,
+  Youtube,
 } from 'lucide-react';
 
 export interface SlashCommand {
@@ -122,6 +123,20 @@ const SLASH_COMMANDS: SlashCommand[] = [
     icon: <Table className="h-4 w-4" />,
     command: (editor) => {
       editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
+  },
+  {
+    title: 'YouTube',
+    description: 'Embed a YouTube video',
+    icon: <Youtube className="h-4 w-4" />,
+    command: (editor) => {
+      const url = window.prompt('YouTube URL');
+      if (url) {
+        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+        if (match) {
+          editor.commands.setYoutubeVideo({ src: `https://www.youtube.com/watch?v=${match[1]}` });
+        }
+      }
     },
   },
 ];

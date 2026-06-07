@@ -87,7 +87,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
 
       {/* Content markup parsing */}
       <div 
-        className="prose prose-stone prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight prose-a:text-red-900 prose-blockquote:border-l-4 prose-blockquote:border-stone-900 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:font-serif prose-blockquote:text-stone-600 text-stone-800 leading-relaxed font-sans"
+        className="post-content prose prose-stone prose-lg max-w-none overflow-hidden prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight prose-a:text-red-900 prose-blockquote:border-l-4 prose-blockquote:border-stone-900 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:font-serif prose-blockquote:text-stone-600 text-stone-800 leading-relaxed font-sans"
         dangerouslySetInnerHTML={{ __html: post.content }}
         id="post-html-content"
       />

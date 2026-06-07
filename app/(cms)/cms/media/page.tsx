@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import CmsShell from '@/components/cms/layout/cms-shell';
 import { getCloudinaryUrl } from '@/lib/utils';
-import { Search, Upload, X, Copy, Trash2, Image } from 'lucide-react';
+import { Search, Upload, X, Copy, Trash2, Image, CheckSquare, Square, Minus } from 'lucide-react';
 import ConfirmDialog from '@/components/cms/shared/confirm-dialog';
 
 interface MediaItem {
@@ -25,7 +25,10 @@ export default function MediaPage() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MediaItem | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMedia = useCallback(async () => {
@@ -87,11 +90,57 @@ export default function MediaPage() {
       await fetch(`/api/media/${deleteTarget.id}`, { method: 'DELETE' });
       setItems(prev => prev.filter(i => i.id !== deleteTarget.id));
       if (selectedItem?.id === deleteTarget.id) setSelectedItem(null);
+      selectedIds.delete(deleteTarget.id);
+      setSelectedIds(new Set(selectedIds));
     } catch (error) {
       console.error('Delete failed:', error);
     } finally {
       setDeleteTarget(null);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const res = await fetch('/api/media/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (res.ok) {
+        setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+        if (selectedItem && selectedIds.has(selectedItem.id)) setSelectedItem(null);
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+      }
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+    } finally {
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const toggleSelection = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === filteredItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
   };
 
   const copyUrl = (item: MediaItem) => {
@@ -111,11 +160,50 @@ export default function MediaPage() {
     item.filename.toLowerCase().includes(search.toLowerCase())
   );
 
+  const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
+
   return (
     <CmsShell>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Media Library</h1>
+          <div className="flex items-center gap-2">
+            {selectionMode ? (
+              <>
+                <button
+                  onClick={selectAll}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
+                >
+                  {allSelected ? <CheckSquare className="h-4 w-4" /> : someSelected ? <Minus className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setBulkDeleteConfirm(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete ({selectedIds.size})
+                  </button>
+                )}
+                <button
+                  onClick={exitSelectionMode}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setSelectionMode(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                <CheckSquare className="h-4 w-4" />
+                Select
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Upload Zone */}
@@ -170,9 +258,17 @@ export default function MediaPage() {
             {filteredItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setSelectedItem(item)}
+                onClick={() => {
+                  if (selectionMode) {
+                    toggleSelection(item.id);
+                  } else {
+                    setSelectedItem(item);
+                  }
+                }}
                 className={`group relative aspect-square rounded-lg overflow-hidden border-2 transition-all min-h-[44px] ${
-                  selectedItem?.id === item.id
+                  selectedIds.has(item.id)
+                    ? 'border-blue-500 ring-2 ring-blue-500/20'
+                    : selectedItem?.id === item.id
                     ? 'border-zinc-900 ring-2 ring-zinc-900/20'
                     : 'border-zinc-200 hover:border-zinc-400'
                 }`}
@@ -182,6 +278,22 @@ export default function MediaPage() {
                   alt={item.filename}
                   className="w-full h-full object-cover"
                 />
+                {/* Selection checkbox overlay */}
+                {selectionMode && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
+                      selectedIds.has(item.id)
+                        ? 'bg-blue-500 border-blue-500 text-white'
+                        : 'bg-white/80 border-zinc-400'
+                    }`}>
+                      {selectedIds.has(item.id) && (
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                   <p className="text-xs text-white truncate">{item.filename}</p>
@@ -192,7 +304,7 @@ export default function MediaPage() {
         )}
 
         {/* Detail Panel */}
-        {selectedItem && (
+        {selectedItem && !selectionMode && (
           <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-lg border border-zinc-200 shadow-xl w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
@@ -251,7 +363,7 @@ export default function MediaPage() {
           </div>
         )}
 
-        {/* Delete Confirmation */}
+        {/* Single Delete Confirmation */}
         <ConfirmDialog
           open={!!deleteTarget}
           title="Delete Media"
@@ -260,6 +372,17 @@ export default function MediaPage() {
           variant="danger"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+
+        {/* Bulk Delete Confirmation */}
+        <ConfirmDialog
+          open={bulkDeleteConfirm}
+          title="Delete Selected Media"
+          description={`Are you sure you want to delete ${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.`}
+          confirmLabel={`Delete ${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''}`}
+          variant="danger"
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkDeleteConfirm(false)}
         />
       </div>
     </CmsShell>

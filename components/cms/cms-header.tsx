@@ -13,7 +13,7 @@ export default function CmsHeader({ onSeedDatabase, onExitCMS }: CmsHeaderProps)
     <header className="bg-stone-50 border-b-2 border-stone-200 px-6 h-16 flex items-center justify-between sticky top-0 z-40" id="cms-header">
       <div className="flex items-center space-x-3 text-stone-900">
         <Component className="h-5 w-5 text-stone-800" />
-        <span className="font-display font-bold text-xl tracking-tight">Journal Desk</span>
+        <span className="font-display font-bold text-xl tracking-tight">CMS</span>
       </div>
       <div className="flex overflow-hidden rounded bg-white border border-stone-300 shadow-sm text-xs font-mono uppercase tracking-widest font-semibold">
         <button

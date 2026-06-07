@@ -10,6 +10,7 @@ import ImageExtension from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import UnderlineExtension from '@tiptap/extension-underline';
 import DropCursor from '@tiptap/extension-dropcursor';
+import Youtube from '@tiptap/extension-youtube';
 import { Category, Tag, MediaItem, PostRevision } from '@/lib/db';
 import { getCloudinaryUrl } from '@/lib/utils';
 
@@ -302,6 +303,14 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           class: 'w-full max-h-[440px] object-cover rounded-lg border border-zinc-200 my-6',
         },
       }),
+      Youtube.configure({
+        HTMLAttributes: {
+          class: 'youtube-embed',
+        },
+        inline: false,
+        width: 0,
+        height: 0,
+      }),
       LinkExtension.configure({
         openOnClick: false,
         HTMLAttributes: { class: 'text-blue-600 underline underline-offset-2' },
@@ -324,7 +333,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       attributes: {
         class:
           'outline-none text-zinc-900 text-base sm:text-[17px] leading-relaxed sm:leading-[1.8] font-sans ' +
-          'prose prose-zinc max-w-none ' +
+          'prose prose-zinc max-w-none overflow-hidden ' +
           '[&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] ' +
           '[&_p.is-editor-empty:first-child::before]:text-zinc-300 ' +
           '[&_p.is-editor-empty:first-child::before]:float-left ' +

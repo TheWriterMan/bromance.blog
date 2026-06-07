@@ -6,7 +6,7 @@ import { Component } from 'lucide-react';
 
 export default function CmsLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function CmsLoginPage() {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!res.ok) {
@@ -40,15 +40,13 @@ export default function CmsLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Brand */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <Component className="h-5 w-5 text-zinc-700" />
           <span className="font-display font-bold text-xl text-zinc-900 tracking-tight">
-            Journal Desk
+            CMS
           </span>
         </div>
 
-        {/* Login card */}
         <div className="bg-white border border-zinc-200 rounded-lg p-6 shadow-sm">
           <h1 className="text-lg font-semibold text-zinc-900 mb-1">Sign in</h1>
           <p className="text-sm text-zinc-500 mb-6">
@@ -63,18 +61,18 @@ export default function CmsLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="login-email" className="block text-sm font-medium text-zinc-700 mb-1.5">
-                Email
+              <label htmlFor="login-username" className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Username
               </label>
               <input
-                id="login-email"
-                type="email"
+                id="login-username"
+                type="text"
                 required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2.5 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 transition-colors"
-                placeholder="you@example.com"
+                placeholder="Username"
               />
             </div>
 

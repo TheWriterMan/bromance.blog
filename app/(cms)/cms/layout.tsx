@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Journal Desk — Bromance CMS',
+  title: 'CMS — Bromance',
   robots: {
     index: false,
     follow: false,

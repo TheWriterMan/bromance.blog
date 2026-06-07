@@ -26,7 +26,7 @@ export default function CategoryFilter({
         id="btn-category-all"
         aria-pressed={!selectedCategory}
       >
-        All Dossiers
+        All
       </button>
       {categories.map((cat) => (
         <button

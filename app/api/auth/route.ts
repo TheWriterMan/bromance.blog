@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// In a real Vercel / Supabase DB build, we would use Supabase Auth.
-// Here we simulate the session seamlessly.
+const VALID_USERNAME = 'R.Amisha';
+const VALID_PASSWORD = 'mouse12345';
+
 export async function GET(req: NextRequest) {
   const cookieHeader = req.headers.get('cookie') || '';
   const isLoggedIn = cookieHeader.includes('cms_logged_in=true');
@@ -11,8 +12,7 @@ export async function GET(req: NextRequest) {
       authenticated: true,
       user: {
         id: 'usr-1',
-        email: 'slipperyslipped@gmail.com',
-        name: 'Slippery Slipped',
+        name: 'R.Amisha',
         role: 'Administrator'
       }
     });
@@ -23,25 +23,26 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { username, password } = await req.json();
     
-    // Accept any password, but check email or make it flexible for flow
-    if (email) {
-      const response = NextResponse.json({
-        success: true,
-        user: {
-          id: 'usr-1',
-          email: email,
-          name: 'Slippery Slipped',
-          role: 'Administrator'
-        }
-      });
-      // Set a cookie that will match the login
-      response.headers.set('Set-Cookie', 'cms_logged_in=true; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400');
-      return response;
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
-    
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+
+    if (username !== VALID_USERNAME || password !== VALID_PASSWORD) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        id: 'usr-1',
+        name: 'R.Amisha',
+        role: 'Administrator'
+      }
+    });
+    response.headers.set('Set-Cookie', 'cms_logged_in=true; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400');
+    return response;
   } catch (err) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
