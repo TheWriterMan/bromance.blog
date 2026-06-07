@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import { getSeedSchema } from './mockdata';
 
-const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_URL || '';
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_URL || '';
 
 // Always initialize it so that type inferences don't break, but error clearly if not set
 if (!databaseUrl) {

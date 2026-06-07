@@ -12,7 +12,6 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
-    "@neondatabase/serverless": "^1.1.0",
     "@tiptap/extension-bubble-menu": "^3.26.0",
     "@tiptap/extension-dropcursor": "^3.26.0",
     "@tiptap/extension-floating-menu": "^3.26.0",
@@ -47,7 +46,6 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.8",
-    "firebase-tools": "^15.0.0",
     "pg": "^8.21.0",
     "tailwindcss": "4.1.11",
     "tsx": "^4.22.4",

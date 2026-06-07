@@ -1,16 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 import * as cheerio from 'cheerio';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from '../lib/schema';
-import { sql } from 'drizzle-orm';
 
-const DATABASE_URL = 'postgresql://neondb_owner:npg_UqiSo0RFnB2f@ep-young-dew-aprss0dh.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is required');
+  process.exit(1);
+}
 
 async function uploadReviews() {
-  console.log('Connecting to Neon database at:', DATABASE_URL);
-  const db = drizzle(neon(DATABASE_URL), { schema });
+  console.log('Connecting to database...');
+  const sql = postgres(DATABASE_URL, { prepare: false, max: 1 });
+  const db = drizzle(sql, { schema });
 
   const listHtml = fs.readFileSync(path.join(process.cwd(), 'lists', 'Everything-Reviews-6445f1eb0446.html'), 'utf-8');
   const $list = cheerio.load(listHtml);
@@ -35,8 +40,6 @@ async function uploadReviews() {
 
   console.log(`Found ${matchedFiles.length} matching HTML files.`);
 
-  // We need a category ID to assign. Let's fetch one or define one.
-  // "Everything Reviews" -> maybe create or use "reviews" category
   let categoryId = 'reviews-cat';
   await db.insert(schema.categories).values({
     id: categoryId,
@@ -66,14 +69,10 @@ async function uploadReviews() {
     const rawContent = $('.e-content').html() || '';
     const $content = cheerio.load(rawContent, null, false);
     
-    // Remove duplicated titles and subtitles
     $content('.graf--title').remove();
     $content('.graf--subtitle').remove();
-    
-    // Remove unnecessary section dividers
     $content('.section-divider').remove();
     
-    // Make images responsive
     $content('img').each((_, img) => {
       $content(img).addClass('w-full h-auto rounded-lg my-6');
       $content(img).removeAttr('width');
@@ -97,7 +96,7 @@ async function uploadReviews() {
     await db.insert(schema.posts).values({
       id: postId,
       title: title,
-      slug: postSlug + '-' + postId, // ensure unique
+      slug: postSlug + '-' + postId,
       content: contentHtml,
       summary: summary,
       status: 'published',
@@ -117,6 +116,7 @@ async function uploadReviews() {
   }
 
   console.log(`Successfully uploaded ${insertedCount} posts.`);
+  await sql.end();
 }
 
 uploadReviews().catch(err => {

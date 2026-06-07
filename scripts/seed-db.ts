@@ -1,5 +1,5 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from '../lib/schema';
 import { 
   MOCK_CATEGORIES, 
@@ -10,11 +10,17 @@ import {
   MOCK_REVISIONS 
 } from '../lib/mockdata';
 
-const DATABASE_URL = 'postgresql://neondb_owner:npg_UqiSo0RFnB2f@ep-young-dew-aprss0dh.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is required');
+  process.exit(1);
+}
 
 async function seed() {
-  console.log('Connecting to Neon database at:', DATABASE_URL);
-  const db = drizzle(neon(DATABASE_URL), { schema });
+  console.log('Connecting to database...');
+  const sql = postgres(DATABASE_URL, { prepare: false, max: 1 });
+  const db = drizzle(sql, { schema });
 
   console.log('Clearing old data from database tables...');
   try {
@@ -68,13 +74,15 @@ async function seed() {
     }))
   );
 
-  console.log('Seeding postTags association join table...');
-  await db.insert(schema.postTags).values(
-    MOCK_POST_TAGS.map(pt => ({
-      postId: pt.post_id,
-      tagId: pt.tag_id
-    }))
-  );
+  if (MOCK_POST_TAGS.length > 0) {
+    console.log('Seeding postTags...');
+    await db.insert(schema.postTags).values(
+      MOCK_POST_TAGS.map(pt => ({
+        postId: pt.post_id,
+        tagId: pt.tag_id
+      }))
+    );
+  }
 
   console.log('Seeding mediaItems...');
   await db.insert(schema.mediaItems).values(
@@ -90,22 +98,25 @@ async function seed() {
     }))
   );
 
-  console.log('Seeding revisions...');
-  await db.insert(schema.postRevisions).values(
-    MOCK_REVISIONS.map(r => ({
-      id: r.id,
-      postId: r.post_id,
-      title: r.title,
-      content: r.content,
-      updatedBy: r.updated_by,
-      createdAt: r.created_at
-    }))
-  );
+  if (MOCK_REVISIONS.length > 0) {
+    console.log('Seeding revisions...');
+    await db.insert(schema.postRevisions).values(
+      MOCK_REVISIONS.map(r => ({
+        id: r.id,
+        postId: r.post_id,
+        title: r.title,
+        content: r.content,
+        updatedBy: r.updated_by,
+        createdAt: r.created_at
+      }))
+    );
+  }
 
-  console.log('Database seeded with 100% real live data successfully!');
+  console.log('Database seeded successfully!');
+  await sql.end();
 }
 
 seed().catch(err => {
-  console.error('Seed script failing:', err);
+  console.error('Seed script failed:', err);
   process.exit(1);
 });
