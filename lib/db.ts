@@ -13,7 +13,8 @@ if (!databaseUrl) {
 }
 
 // For Supabase we use { prepare: false } for connection pooler compatibility
-export const sql = postgres(databaseUrl || 'postgresql://postgres:postgres@localhost:5432/fake', { prepare: false, max: 1 });
+// ssl: 'require' ensures the connection doesn't hang on Vercel serverless
+export const sql = postgres(databaseUrl || 'postgresql://postgres:postgres@localhost:5432/fake', { prepare: false, max: 1, ssl: 'require', idle_timeout: 20, connect_timeout: 10 });
 export const db = drizzle(sql, { schema });
 
 export interface Category {
