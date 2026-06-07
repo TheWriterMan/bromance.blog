@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       categoryId: activeCategory,
-      featuredImage: featured_image || 'samples/typography_banner',
+      featuredImage: featured_image || '',
       metaTitle: meta_title || title,
       metaDescription: meta_description || summary || '',
       canonicalUrl: canonical_url || '',
