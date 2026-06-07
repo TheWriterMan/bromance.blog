@@ -189,12 +189,16 @@ export async function PUT(
     }
     
     if (oldSlug && oldSlug !== finalSlug) {
+      // Upsert: update destination if a redirect from this source already exists
       await db.insert(schema.redirects).values({
         id: `redir-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         source: oldSlug,
         destination: finalSlug,
         permanent: 1,
         createdAt: new Date().toISOString()
+      }).onConflictDoUpdate({
+        target: schema.redirects.source,
+        set: { destination: finalSlug, createdAt: new Date().toISOString() },
       });
     }
 

@@ -9,6 +9,7 @@ import {
   Image,
   FolderOpen,
   Tag,
+  MessageSquare,
   UserCircle,
   Settings,
   X,
@@ -22,6 +23,7 @@ interface MobileDrawerProps {
 const NAV_ITEMS = [
   { href: '/cms', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/cms/posts', label: 'Posts', icon: FileText },
+  { href: '/cms/comments', label: 'Comments', icon: MessageSquare },
   { href: '/cms/media', label: 'Media', icon: Image },
   { href: '/cms/categories', label: 'Categories', icon: FolderOpen },
   { href: '/cms/tags', label: 'Tags', icon: Tag },

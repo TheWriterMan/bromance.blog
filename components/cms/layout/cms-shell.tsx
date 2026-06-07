@@ -10,6 +10,7 @@ import MobileDrawer from './mobile-drawer';
 const SECTION_LABELS: Record<string, string> = {
   '/cms': 'Dashboard',
   '/cms/posts': 'Posts',
+  '/cms/comments': 'Comments',
   '/cms/media': 'Media',
   '/cms/categories': 'Categories',
   '/cms/tags': 'Tags',

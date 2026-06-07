@@ -6,7 +6,6 @@ import { eq, desc } from 'drizzle-orm';
 function isTableMissingError(error: any): boolean {
   const msg = error?.message || error?.toString() || '';
   const code = error?.code || '';
-  // postgres-js: code 42P01 = undefined_table
   return code === '42P01' || msg.includes('does not exist') || msg.includes('undefined_table');
 }
 
@@ -76,5 +75,32 @@ export async function POST(
     }
     console.error('POST /api/posts/[id]/comments error:', error);
     return NextResponse.json({ error: 'Failed to post comment' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const commentId = searchParams.get('commentId');
+
+    if (!commentId) {
+      // Delete ALL comments for this post
+      await db.delete(schema.comments).where(eq(schema.comments.postId, id));
+      return NextResponse.json({ success: true, message: 'All comments deleted' });
+    }
+
+    // Delete single comment
+    await db.delete(schema.comments).where(eq(schema.comments.id, commentId));
+    return NextResponse.json({ success: true, message: 'Comment deleted' });
+  } catch (error: any) {
+    if (isTableMissingError(error)) {
+      return NextResponse.json({ error: 'Comments table missing' }, { status: 503 });
+    }
+    console.error('DELETE /api/posts/[id]/comments error:', error);
+    return NextResponse.json({ error: 'Failed to delete comment' }, { status: 500 });
   }
 }
