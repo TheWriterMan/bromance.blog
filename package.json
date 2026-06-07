@@ -1,5 +1,5 @@
 {
-  "name": "ai-studio-applet",
+  "name": "bromance",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,8 +10,7 @@
     "clean": "next clean"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
-    "@hookform/resolvers": "^5.2.1",
+
     "@tiptap/extension-bubble-menu": "^3.26.0",
     "@tiptap/extension-code-block-lowlight": "^3.26.0",
     "@tiptap/extension-dropcursor": "^3.26.0",
@@ -37,7 +36,7 @@
     "idb-keyval": "^6.2.5",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.553.0",
-    "motion": "^12.23.24",
+
     "next": "^15.4.9",
     "postcss": "^8.5.6",
     "postgres": "^3.4.9",

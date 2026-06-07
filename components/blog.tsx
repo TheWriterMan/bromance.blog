@@ -102,10 +102,10 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
               
               <div className="border-b border-stone-800 pb-8 mb-4">
                 <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-900 mb-4">
-                  The Archives
+                  Latest Posts
                 </h1>
                 <p className="font-sans text-lg text-stone-600 max-w-2xl">
-                  An examination of true crime, historical enigmas, and legal philosophy. Select a dossier below or filter by division to investigate further.
+                  Donghua, drama, manga, and novel reviews. Browse below or filter by category.
                 </p>
               </div>
 
@@ -123,7 +123,7 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
               {/* Feed Grid cards */}
               {error ? (
                 <div className="text-center py-12 border border-stone-200 bg-stone-100 rounded p-6" id="blog-feed-error">
-                  <p className="text-red-800 font-mono text-sm mb-4">ERROR ACCESSING ARCHIVES: {error}</p>
+                  <p className="text-red-800 font-mono text-sm mb-4">Error loading posts: {error}</p>
                   <button
                     onClick={() => setRetry(prev => prev + 1)}
                     className="px-4 py-2 bg-stone-900 text-stone-50 font-mono text-xs uppercase tracking-widest hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-500 rounded transition-colors"
@@ -148,9 +148,9 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                 </div>
               ) : posts.length === 0 ? (
                 <div className="text-center py-20 border border-stone-200 bg-white rounded p-8" id="blog-feed-empty">
-                  <h3 className="font-display font-medium text-stone-900 text-2xl mb-2">No Records Found</h3>
+                  <h3 className="font-display font-medium text-stone-900 text-2xl mb-2">No posts found</h3>
                   <p className="font-sans text-stone-500 text-lg max-w-sm mx-auto mb-6">
-                    {searchQuery ? `The query "${searchQuery}" yielded no results in the database.` : 'The archives are currently empty for this classification.'}
+                    {searchQuery ? `The query "${searchQuery}" returned no results.` : 'No posts match this filter.'}
                   </p>
                   {(searchQuery || selectedCategory || selectedTag) && (
                     <button
@@ -159,7 +159,7 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                       id="btn-clear-filters"
                       aria-label="Clear all applied filters"
                     >
-                      Clear Search Parameters
+                      Clear filters
                     </button>
                   )}
                 </div>
@@ -201,7 +201,7 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
               
               {/* Search widget box */}
               <div className="bg-white p-6 border border-stone-200 rounded relative">
-                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Investigate</h3>
+                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Search</h3>
                 <SearchBar 
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
@@ -210,7 +210,7 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
 
               {/* Tag Selection cloud widget */}
               <div className="bg-white p-6 border border-stone-200 rounded">
-                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Evidence Tags</h3>
+                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Tags</h3>
                 <TagCloud 
                   posts={posts}
                   selectedTag={selectedTag}

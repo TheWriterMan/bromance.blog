@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Logo from '@/components/ui/logo';
 
 interface BlogHeaderProps {
   onResetFilters: () => void;
@@ -12,10 +13,10 @@ export default function BlogHeader({ onResetFilters }: BlogHeaderProps) {
       <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
         <button 
           onClick={onResetFilters}
-          className="font-display font-bold text-2xl text-stone-900 tracking-tight cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-stone-500 rounded"
+          className="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-stone-500 rounded"
           aria-label="Home / Reset Filters"
         >
-          Bro<span className="text-red-800">mance</span>
+          <Logo size="sm" />
         </button>
       </div>
     </header>

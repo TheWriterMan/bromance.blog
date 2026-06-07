@@ -23,7 +23,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
           id="btn-back-to-list"
         >
           <ArrowLeft className="h-3.5 w-3.5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Archives
+          Back to All Posts
         </button>
       ) : (
         <Link
@@ -32,7 +32,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
           id="btn-back-to-list"
         >
           <ArrowLeft className="h-3.5 w-3.5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Archives
+          Back to All Posts
         </Link>
       )}
 
@@ -41,7 +41,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
         <div className="flex flex-wrap items-center text-xs text-stone-500 gap-x-4 gap-y-2 mb-6 font-mono uppercase tracking-widest">
           <span className="flex items-center font-bold text-stone-800">
             <Feather className="h-3.5 w-3.5 mr-1.5" />
-            SlipperySlipped
+            Amy97
           </span>
           <span className="text-stone-300">|</span>
           <span className="flex items-center">
@@ -79,7 +79,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
             alt={post.title}
             fill
             sizes="(max-width: 768px) 100vw, 800px"
-            className="object-cover w-full h-full filter grayscale border border-stone-200"
+            className="object-cover w-full h-full border border-stone-200"
             referrerPolicy="no-referrer"
           />
         </div>
@@ -95,7 +95,7 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
       {/* Footer level mapping of tags */}
       {post.tags && post.tags.length > 0 && (
         <div className="mt-16 pt-8 border-t-2 border-stone-200" id="post-detail-tags" aria-label="Tags">
-          <span className="block text-xs font-mono text-stone-500 uppercase tracking-widest mb-4">Evidence Tags</span>
+          <span className="block text-xs font-mono text-stone-500 uppercase tracking-widest mb-4">Tags</span>
           <div className="flex flex-wrap gap-2">
             {post.tags.map((t: any) => (
               <span

@@ -98,8 +98,8 @@ export default async function PostPage(props: { params: Promise<{ slug: string }
       image: post.ogImage || post.featuredImage || '',
       author: {
         '@type': 'Person',
-        name: 'slipperyslipped',
-        url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/slipperyslipped`
+        name: 'Amy97',
+        url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/amy97`
       },
       datePublished: post.publishedAt || post.createdAt,
       dateModified: post.updatedAt,

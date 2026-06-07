@@ -172,7 +172,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   const [categoryId, setCategoryId] = useState('');
   const [featuredImage, setFeaturedImage] = useState('samples/workspace');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [authorName] = useState('slipperyslipped');
+  const [authorName] = useState('Amy97');
 
   // SEO
   const [metaTitle, setMetaTitle] = useState('');

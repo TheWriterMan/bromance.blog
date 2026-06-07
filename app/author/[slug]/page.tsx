@@ -7,11 +7,10 @@ import Blog from '@/components/blog';
 import Image from 'next/image';
 
 const AUTHOR_INFO = {
-  name: 'Author Name',
-  slug: 'author',
-  bio: 'Lead author and editor of the Clean Blog Publishing system. Focused on producing high-quality written content about modern web publishing, CMS architecture, and user experience.',
+  name: 'Amy97',
+  slug: 'amy97',
+  bio: '',
   avatar: 'https://picsum.photos/seed/author/150/150',
-  social: 'https://twitter.com/author'
 };
 
 export async function generateMetadata(
@@ -55,7 +54,6 @@ export default async function AuthorPage(props: { params: Promise<{ slug: string
     description: AUTHOR_INFO.bio,
     image: AUTHOR_INFO.avatar,
     url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/${AUTHOR_INFO.slug}`,
-    sameAs: [AUTHOR_INFO.social]
   };
 
   return (
@@ -70,8 +68,9 @@ export default async function AuthorPage(props: { params: Promise<{ slug: string
         </div>
         <div>
           <h1 className="font-sans text-3xl font-bold text-zinc-900 mb-2">{AUTHOR_INFO.name}</h1>
-          <p className="text-zinc-500 max-w-2xl text-sm leading-relaxed mb-4">{AUTHOR_INFO.bio}</p>
-          <a href={AUTHOR_INFO.social} className="text-xs font-semibold text-zinc-600 hover:text-black">@author</a>
+          {AUTHOR_INFO.bio && (
+            <p className="text-zinc-500 max-w-2xl text-sm leading-relaxed mb-4">{AUTHOR_INFO.bio}</p>
+          )}
         </div>
       </div>
       <Blog />

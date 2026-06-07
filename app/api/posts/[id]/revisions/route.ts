@@ -80,7 +80,7 @@ export async function POST(
       postId: currentPost.id,
       title: currentPost.title,
       content: currentPost.content,
-      updatedBy: 'slipperyslipped@gmail.com',
+      updatedBy: 'amy97',
       createdAt: new Date().toISOString()
     });
 

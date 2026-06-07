@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       authenticated: true,
       user: {
         id: 'usr-1',
-        name: 'R.Amisha',
+        name: 'Amy97',
         role: 'Administrator'
       }
     });
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       success: true,
       user: {
         id: 'usr-1',
-        name: 'R.Amisha',
+        name: 'Amy97',
         role: 'Administrator'
       }
     });

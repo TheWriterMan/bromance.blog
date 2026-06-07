@@ -28,7 +28,7 @@ export default function TagCloud({ posts, selectedTag, onSelectTag }: TagCloudPr
           id="btn-tag-all"
           aria-pressed={!selectedTag}
         >
-          ALL EVIDENCES
+          All
         </button>
         {allUniqueTags.map((tag: any) => {
           const isSelected = selectedTag === tag.slug;

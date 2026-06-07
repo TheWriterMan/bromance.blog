@@ -1,6 +1,0 @@
-{
-  "name": "Simple Clean Blog CMS",
-  "description": "A clean, modern blog and content management system (CMS) with posts, drafts, scheduling, revisions, media library, and analytics.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
