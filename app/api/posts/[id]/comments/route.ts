@@ -3,6 +3,13 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq, desc } from 'drizzle-orm';
 
+function isTableMissingError(error: any): boolean {
+  const msg = error?.message || error?.toString() || '';
+  const code = error?.code || '';
+  // postgres-js: code 42P01 = undefined_table
+  return code === '42P01' || msg.includes('does not exist') || msg.includes('undefined_table');
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,9 +30,10 @@ export async function GET(
       created_at: c.createdAt,
     })));
   } catch (error: any) {
-    if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+    if (isTableMissingError(error)) {
       return NextResponse.json([]);
     }
+    console.error('GET /api/posts/[id]/comments error:', error);
     return NextResponse.json({ error: 'Failed to get comments' }, { status: 500 });
   }
 }
@@ -63,9 +71,10 @@ export async function POST(
       created_at: comment.createdAt,
     }, { status: 201 });
   } catch (error: any) {
-    if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+    if (isTableMissingError(error)) {
       return NextResponse.json({ error: 'Comments not yet configured (DB table missing)' }, { status: 503 });
     }
+    console.error('POST /api/posts/[id]/comments error:', error);
     return NextResponse.json({ error: 'Failed to post comment' }, { status: 500 });
   }
 }

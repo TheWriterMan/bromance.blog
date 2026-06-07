@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Category } from '@/lib/db';
-import { DESIGN } from '@/lib/design';
 
 // Sub-components
 import BlogHeader from './blog/blog-header';
-import CategoryFilter from './blog/category-filter';
 import HeroBanner from './blog/hero-banner';
 import PostCard from './blog/post-card';
-import PostDetail from './blog/post-detail';
-import SearchBar from './blog/search-bar';
 import TagCloud from './blog/tag-cloud';
 
 interface BlogProps {
@@ -92,9 +88,18 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Editorial Header */}
-      <BlogHeader 
-        onResetFilters={handleResetFilters} 
+      {/* Sticky Header with Nav + Search */}
+      <BlogHeader
+        onResetFilters={handleResetFilters}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={(catId) => {
+          setSelectedCategory(catId);
+          setSelectedTag(null);
+          setPage(1);
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
       {/* Main Area */}
@@ -112,17 +117,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                   Donghua, drama, manga, and novel reviews. Browse below or filter by category.
                 </p>
               </div>
-
-              {/* Filtering */}
-              <CategoryFilter 
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={(catId) => {
-                  setSelectedCategory(catId);
-                  setSelectedTag(null);
-                  setPage(1);
-                }}
-              />
 
               {/* Feed Grid cards */}
               {error ? (
@@ -201,18 +195,8 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
             </div>
 
             {/* Sticky Sidebar */}
-            <aside className="w-full lg:w-80 space-y-10" id="blog-feed-sidebar">
-              
-              {/* Search widget box */}
-              <div className="bg-white p-6 border border-stone-200 rounded relative">
-                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Search</h3>
-                <SearchBar 
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                />
-              </div>
-
-              {/* Tag Selection cloud widget */}
+            <aside className="w-full lg:w-72 space-y-10" id="blog-feed-sidebar">
+              {/* Tag cloud widget */}
               <div className="bg-white p-6 border border-stone-200 rounded">
                 <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Tags</h3>
                 <TagCloud 
@@ -224,7 +208,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                   }}
                 />
               </div>
-
             </aside>
           </div>
       </main>
@@ -232,7 +215,7 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
       {/* Footer */}
       <footer className="border-t border-stone-200 bg-stone-900 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center" id="blog-footer">
         <div className="max-w-6xl mx-auto px-6">
-          <p>© 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
+          <p>&copy; 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
         </div>
       </footer>
     </div>

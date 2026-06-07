@@ -284,8 +284,8 @@ export async function POST(req: NextRequest) {
       category: matchedCategory,
       tags: matchedTags
     }, { status: 201 });
-  } catch (error) {
-    console.error('Create post error:', error);
-    return NextResponse.json({ error: 'Failed to create post' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Create post error:', error?.message || error, error?.code || '', error?.detail || '');
+    return NextResponse.json({ error: 'Failed to create post', detail: error?.message || 'Unknown error' }, { status: 500 });
   }
 }

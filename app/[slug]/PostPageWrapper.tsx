@@ -17,7 +17,7 @@ export default function PostPageWrapper({ post }: { post: any }) {
       </main>
       <footer className="border-t border-stone-200 bg-stone-900 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <p>© 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
+          <p>&copy; 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
         </div>
       </footer>
     </div>

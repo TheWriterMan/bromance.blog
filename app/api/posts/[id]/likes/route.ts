@@ -3,6 +3,13 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq, and, count } from 'drizzle-orm';
 
+function isTableMissingError(error: any): boolean {
+  const msg = error?.message || error?.toString() || '';
+  const code = error?.code || '';
+  // postgres-js: code 42P01 = undefined_table
+  return code === '42P01' || msg.includes('does not exist') || msg.includes('undefined_table');
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,10 +38,10 @@ export async function GET(
 
     return NextResponse.json({ count: result?.count ?? 0, liked });
   } catch (error: any) {
-    // Table may not exist yet
-    if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+    if (isTableMissingError(error)) {
       return NextResponse.json({ count: 0, liked: false });
     }
+    console.error('GET /api/posts/[id]/likes error:', error);
     return NextResponse.json({ error: 'Failed to get likes' }, { status: 500 });
   }
 }
@@ -89,9 +96,10 @@ export async function POST(
     }
     return response;
   } catch (error: any) {
-    if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+    if (isTableMissingError(error)) {
       return NextResponse.json({ error: 'Likes not yet configured (DB table missing)' }, { status: 503 });
     }
+    console.error('POST /api/posts/[id]/likes error:', error);
     return NextResponse.json({ error: 'Failed to like post' }, { status: 500 });
   }
 }

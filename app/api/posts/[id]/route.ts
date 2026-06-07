@@ -190,7 +190,7 @@ export async function PUT(
     
     if (oldSlug && oldSlug !== finalSlug) {
       await db.insert(schema.redirects).values({
-        id: crypto.randomUUID(),
+        id: `redir-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         source: oldSlug,
         destination: finalSlug,
         permanent: 1,
@@ -269,9 +269,9 @@ export async function PUT(
       category,
       tags: updatedTags
     });
-  } catch (error) {
-    console.error('Update post error:', error);
-    return NextResponse.json({ error: 'Failed to update post' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Update post error:', error?.message || error, error?.code || '', error?.detail || '');
+    return NextResponse.json({ error: 'Failed to update post', detail: error?.message || 'Unknown error' }, { status: 500 });
   }
 }
 
