@@ -8,18 +8,24 @@ jobs:
     steps:
       - name: Trigger Vercel Deployment
         run: |
-          curl -X POST "https://api.vercel.com/v13/deployments" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.vercel.com/v13/deployments?teamId=team_c2vJiNlVfD4IVOQX72gQ6AVt" \
             -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "name": "simple-clean-blog",
+              "name": "bromance",
               "project": "${{ secrets.VERCEL_PROJECT_ID }}",
               "target": "production",
-              "teamId": "team_c2vJiNlVfD4IVOQX72gQ6AVt",
               "gitSource": {
                 "type": "github",
-                "repo": "simple-clean-blog",
+                "repo": "bromance",
                 "ref": "main",
                 "org": "hobi-design"
               }
-            }'
+            }')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "$BODY"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Vercel API returned HTTP $HTTP_CODE"
+            exit 1
+          fi
