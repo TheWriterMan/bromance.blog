@@ -4,13 +4,15 @@ import React from 'react';
 import PostDetail from '@/components/blog/post-detail';
 import BlogHeader from '@/components/blog/blog-header';
 
-export default function PostPageWrapper({ post }: { post: any }) {
+export default function PostPageWrapper({ post }: { post: any & { author?: { displayName: string; slug: string } } }) {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 font-sans selection:bg-red-950 selection:text-white">
       <BlogHeader onResetFilters={() => { window.location.href = '/'; }} />
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12">
         <PostDetail 
           post={post} 
+          authorName={post.author?.displayName || 'Amy97'}
+          authorSlug={post.author?.slug || 'amy97'}
           onBack={() => { window.location.href = '/'; }} 
           onSelectTag={(slug) => { window.location.href = `/?tag=${slug}`; }} 
         />

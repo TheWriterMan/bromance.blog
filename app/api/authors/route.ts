@@ -49,6 +49,12 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  // Auth check
+  const cookie = req.cookies.get('cms_logged_in')?.value;
+  if (cookie !== 'true') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const data = await req.json();
     const { display_name, slug, bio, avatar_url } = data;

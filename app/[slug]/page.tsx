@@ -21,7 +21,7 @@ export async function generateMetadata(
     return {};
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
   const url = `${baseUrl}/${post.slug}`;
 
   return {
@@ -96,6 +96,7 @@ export default async function PostPage(props: { params: Promise<{ slug: string }
     featured_image: post.featuredImage,
     category,
     tags: joinedTags,
+    author: authorData,
   };
 
   const jsonLd: any[] = [

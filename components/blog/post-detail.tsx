@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ArrowLeft, Feather, Calendar } from 'lucide-react';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
 import Image from 'next/image';
@@ -10,27 +10,13 @@ import PostComments from './post-comments';
 
 interface PostDetailProps {
   post: any;
+  authorName?: string;
+  authorSlug?: string;
   onBack?: () => void;
   onSelectTag?: (tagSlug: string) => void;
 }
 
-export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProps) {
-  const [authorName, setAuthorName] = useState('Amy97');
-  const [authorSlug, setAuthorSlug] = useState('amy97');
-
-  useEffect(() => {
-    async function fetchAuthor() {
-      try {
-        const res = await fetch('/api/authors');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.display_name) setAuthorName(data.display_name);
-          if (data.slug) setAuthorSlug(data.slug);
-        }
-      } catch {}
-    }
-    fetchAuthor();
-  }, []);
+export default function PostDetail({ post, authorName = 'Amy97', authorSlug = 'amy97', onBack, onSelectTag }: PostDetailProps) {
   return (
     <article className="max-w-3xl mx-auto animate-fade-in" id={`post-detail-${post.id}`}>
       {/* Back Nav Link */}
