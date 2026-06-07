@@ -25,6 +25,11 @@ export function getCloudinaryUrl(
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) return publicId;
   // Legacy base64 data — should not exist, return placeholder
   if (publicId.startsWith('data:')) return 'https://picsum.photos/seed/blog/800/450';
+  // Guard: if cloud name is not configured, return placeholder instead of broken URL
+  if (!CLOUD_NAME) {
+    console.warn('[getCloudinaryUrl] NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is not set');
+    return 'https://picsum.photos/seed/blog/800/450';
+  }
 
   const transforms = TRANSFORMS[preset];
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
