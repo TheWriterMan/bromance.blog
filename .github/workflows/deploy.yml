@@ -1,0 +1,25 @@
+name: Deploy to Vercel
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deployment
+        run: |
+          curl -X POST "https://api.vercel.com/v13/deployments" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "simple-clean-blog",
+              "project": "${{ secrets.VERCEL_PROJECT_ID }}",
+              "target": "production",
+              "teamId": "team_c2vJiNlVfD4IVOQX72gQ6AVt",
+              "gitSource": {
+                "type": "github",
+                "repo": "simple-clean-blog",
+                "ref": "main",
+                "org": "hobi-design"
+              }
+            }'
