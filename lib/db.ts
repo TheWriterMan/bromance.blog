@@ -1,22 +1,28 @@
-import fs from 'fs';
-import path from 'path';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
-import { getSeedSchema } from './mockdata';
 
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_URL || '';
 
-// Always initialize it so that type inferences don't break, but error clearly if not set
 if (!databaseUrl) {
   console.warn("WARNING: DATABASE_URL is not set. Database connections will fail.");
 }
 
-// For Supabase we use { prepare: false } for connection pooler compatibility
-// ssl: 'require' ensures the connection doesn't hang on Vercel serverless
-export const sql = postgres(databaseUrl || 'postgresql://postgres:postgres@localhost:5432/fake', { prepare: false, max: 1, ssl: 'require', idle_timeout: 20, connect_timeout: 10 });
+// Connection pool sized for serverless concurrency.
+// Supabase transaction pooler requires prepare: false.
+// max: 10 allows parallel queries within a single serverless invocation
+// without exhausting Supabase's default 60-connection limit across instances.
+export const sql = postgres(databaseUrl || 'postgresql://postgres:postgres@localhost:5432/fake', {
+  prepare: false,
+  max: 10,
+  ssl: 'require',
+  idle_timeout: 20,
+  connect_timeout: 15,
+  max_lifetime: 60 * 5, // 5 min max connection lifetime to prevent stale pooler connections
+});
 export const db = drizzle(sql, { schema });
 
+// Type interfaces used by components
 export interface Category {
   id: string;
   name: string;
@@ -34,14 +40,14 @@ export interface Post {
   id: string;
   title: string;
   slug: string;
-  content: string; // HTML or structured content
-  summary: string; // Excerpt/SEO
+  content: string;
+  summary: string;
   status: 'draft' | 'published' | 'scheduled';
   published_at: string | null;
   created_at: string;
   updated_at: string;
   category_id: string;
-  featured_image: string; // Cloudinary Public ID
+  featured_image: string;
   meta_title: string;
   meta_description: string;
   canonical_url: string;
@@ -55,7 +61,7 @@ export interface PostTag {
 
 export interface MediaItem {
   id: string;
-  cloudinary_id: string; // Cloudinary Public ID
+  cloudinary_id: string;
   filename: string;
   width: number;
   height: number;
@@ -73,6 +79,7 @@ export interface PostRevision {
   created_at: string;
 }
 
+
 export interface Schema {
   categories: Category[];
   tags: Tag[];
@@ -80,31 +87,4 @@ export interface Schema {
   post_tags: PostTag[];
   media: MediaItem[];
   revisions: PostRevision[];
-}
-
-const DB_FILE = path.join(process.cwd(), 'db.json');
-
-// Helper to load schema from JSON file (as a robust fallback)
-export function readDB(): Schema {
-  try {
-    if (!fs.existsSync(DB_FILE)) {
-      const initialSchema = getSeedSchema();
-      saveDB(initialSchema);
-      return initialSchema;
-    }
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(data) as Schema;
-  } catch (error) {
-    console.error('Error reading DB, using hardcoded static structure', error);
-    return getSeedSchema();
-  }
-}
-
-// Helper to save schema to JSON file (as a robust fallback)
-export function saveDB(data: Schema): void {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Error writing to DB file', error);
-  }
 }

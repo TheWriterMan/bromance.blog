@@ -5,30 +5,6 @@ import { eq, and, sql, desc, inArray, ilike, or } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
-function generateUniqueSlug(title: string, currentPosts: { slug: string; id: string }[], excludeId?: string): string {
-  let baseSlug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // remove special chars
-    .trim()
-    .replace(/\s+/g, '-'); // replace spaces with dashes
-    
-  if (!baseSlug) {
-    baseSlug = 'untitled-post';
-  }
-
-  let slug = baseSlug;
-  let matches = currentPosts.filter(p => p.slug === slug && p.id !== excludeId);
-  let counter = 1;
-
-  while (matches.length > 0) {
-    slug = `${baseSlug}-${counter}`;
-    matches = currentPosts.filter(p => p.slug === slug && p.id !== excludeId);
-    counter++;
-  }
-
-  return slug;
-}
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -119,26 +95,16 @@ export async function GET(req: NextRequest) {
     const postIds = postsList.map(p => p.id);
     const activeCategoryIds = postsList.map(p => p.categoryId).filter(Boolean) as string[];
     
-    // Fetch related categories and tags in parallel
-    const [categoriesList, postTagsListResult] = await Promise.all([
+    // Fetch related categories, tags, and post_tags in parallel (single round trip)
+    const [categoriesList, postTagsListResult, tagsList] = await Promise.all([
       activeCategoryIds.length > 0 
         ? db.select().from(schema.categories).where(inArray(schema.categories.id, activeCategoryIds)) 
         : Promise.resolve([]),
       postIds.length > 0
         ? db.select().from(schema.postTags).where(inArray(schema.postTags.postId, postIds))
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      db.select().from(schema.tags)
     ]);
-
-    let tagsList: any[] = [];
-    if (postTagsListResult.length > 0) {
-       const tagIds = postTagsListResult.map(pt => pt.tagId);
-       if (tagIds.length > 0) {
-         tagsList = await db.select().from(schema.tags).where(inArray(schema.tags.id, tagIds));
-       }
-    }
-    
-    const postTagsList = postTagsListResult;
-
     // Map database structures to API output structures
     const categories = categoriesList.map(c => ({
       id: c.id,
@@ -153,7 +119,7 @@ export async function GET(req: NextRequest) {
       slug: t.slug
     }));
 
-    const postTags = postTagsList.map(pt => ({
+    const postTags = postTagsListResult.map(pt => ({
       post_id: pt.postId,
       tag_id: pt.tagId
     }));
@@ -231,13 +197,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    // Fetch lists for unique slug checking
-    const postsList = await db.select().from(schema.posts);
-    const categoriesList = await db.select().from(schema.categories);
-    const tagsList = await db.select().from(schema.tags);
+    // Fetch categories and tags in parallel (needed for response enrichment)
+    const [categoriesList, tagsList] = await Promise.all([
+      db.select().from(schema.categories),
+      db.select().from(schema.tags),
+    ]);
 
     const newId = `post-${Date.now()}`;
-    const calculatedSlug = generateUniqueSlug(title, postsList);
+    
+    // Generate slug with targeted conflict check (not loading all posts)
+    let baseSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-') || 'untitled-post';
+    
+    const conflicts = await db
+      .select({ slug: schema.posts.slug })
+      .from(schema.posts)
+      .where(eq(schema.posts.slug, baseSlug))
+      .limit(1);
+    const calculatedSlug = conflicts.length > 0 ? `${baseSlug}-${Date.now()}` : baseSlug;
 
     let pubDate: string | null = null;
     if (status === 'published') {
@@ -273,14 +253,11 @@ export async function POST(req: NextRequest) {
     // Insert post
     await db.insert(schema.posts).values(newPost);
 
-    // Save linked tags
-    if (tagIds && Array.isArray(tagIds)) {
-      for (const tagId of tagIds) {
-        await db.insert(schema.postTags).values({
-          postId: newId,
-          tagId: tagId
-        });
-      }
+    // Save linked tags (batch insert)
+    if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
+      await db.insert(schema.postTags).values(
+        tagIds.map((tagId: string) => ({ postId: newId, tagId }))
+      );
     }
 
     const matchedCategory = categoriesList.find(c => c.id === activeCategory);

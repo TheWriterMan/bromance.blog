@@ -1,33 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { eq, or, and } from 'drizzle-orm';
+import { eq, or, and, sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
-
-function generateUniqueSlug(title: string, currentPosts: { slug: string; id: string }[], excludeId: string): string {
-  let baseSlug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-');
-    
-  if (!baseSlug) {
-    baseSlug = 'untitled-post';
-  }
-
-  let slug = baseSlug;
-  let matches = currentPosts.filter(p => p.slug === slug && p.id !== excludeId);
-  let counter = 1;
-
-  while (matches.length > 0) {
-    slug = `${baseSlug}-${counter}`;
-    matches = currentPosts.filter(p => p.slug === slug && p.id !== excludeId);
-    counter++;
-  }
-
-  return slug;
-}
 
 export async function GET(
   req: NextRequest,
@@ -52,35 +28,32 @@ export async function GET(
 
     const post = matchedPosts[0];
 
-    const categoryQuery = db
-      .select()
-      .from(schema.categories)
-      .where(eq(schema.categories.id, post.categoryId || ''));
+    // Fire category, tags queries in parallel (not sequentially)
+    const [categoriesList, joinedTags] = await Promise.all([
+      db
+        .select()
+        .from(schema.categories)
+        .where(eq(schema.categories.id, post.categoryId || '')),
+      db
+        .select({
+          id: schema.tags.id,
+          name: schema.tags.name,
+          slug: schema.tags.slug
+        })
+        .from(schema.postTags)
+        .innerJoin(schema.tags, eq(schema.postTags.tagId, schema.tags.id))
+        .where(eq(schema.postTags.postId, post.id)),
+    ]);
 
-    const tagsQuery = db
-      .select({
-        id: schema.tags.id,
-        name: schema.tags.name,
-        slug: schema.tags.slug
-      })
-      .from(schema.postTags)
-      .innerJoin(schema.tags, eq(schema.postTags.tagId, schema.tags.id))
-      .where(eq(schema.postTags.postId, post.id));
-
-    let updatePromise: any = Promise.resolve();
+    // Increment view count in background (don't await — fire and forget)
     if (incrementView) {
-      updatePromise = db
-        .update(schema.posts)
+      db.update(schema.posts)
         .set({ views: (post.views || 0) + 1 })
-        .where(eq(schema.posts.id, post.id));
+        .where(eq(schema.posts.id, post.id))
+        .then(() => {})
+        .catch((e) => console.error('View increment failed:', e));
       post.views = (post.views || 0) + 1;
     }
-
-    const [categoriesList, joinedTags] = await Promise.all([
-      categoryQuery,
-      tagsQuery,
-      updatePromise
-    ]);
 
     const category = categoriesList[0] || null;
 
@@ -188,16 +161,31 @@ export async function PUT(
       }
     }
 
-    // Determine unique slug
-    const allPostsList = await db.select().from(schema.posts);
+    // Determine unique slug (targeted query instead of fetching all posts)
     let finalSlug = oldPost.slug;
     let oldSlug = null;
     if (title && title !== oldPost.title) {
       oldSlug = finalSlug;
-      finalSlug = generateUniqueSlug(title, allPostsList, oldPost.id);
+      const candidateSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-') || 'untitled-post';
+      // Check if candidate slug is taken by another post
+      const conflicts = await db
+        .select({ slug: schema.posts.slug })
+        .from(schema.posts)
+        .where(and(eq(schema.posts.slug, candidateSlug), sql`${schema.posts.id} != ${oldPost.id}`))
+        .limit(1);
+      finalSlug = conflicts.length > 0 ? `${candidateSlug}-${Date.now()}` : candidateSlug;
     } else if (slug && slug !== oldPost.slug) {
       oldSlug = finalSlug;
-      finalSlug = generateUniqueSlug(slug, allPostsList, oldPost.id);
+      const conflicts = await db
+        .select({ slug: schema.posts.slug })
+        .from(schema.posts)
+        .where(and(eq(schema.posts.slug, slug), sql`${schema.posts.id} != ${oldPost.id}`))
+        .limit(1);
+      finalSlug = conflicts.length > 0 ? `${slug}-${Date.now()}` : slug;
     }
     
     if (oldSlug && oldSlug !== finalSlug) {
@@ -233,14 +221,13 @@ export async function PUT(
       .set(updatePayload)
       .where(eq(schema.posts.id, id));
 
-    // Sync Tag association link table
+    // Sync Tag association link table (batch insert instead of sequential)
     if (tagIds && Array.isArray(tagIds)) {
       await db.delete(schema.postTags).where(eq(schema.postTags.postId, oldPost.id));
-      for (const tagId of tagIds) {
-        await db.insert(schema.postTags).values({
-          postId: oldPost.id,
-          tagId: tagId
-        });
+      if (tagIds.length > 0) {
+        await db.insert(schema.postTags).values(
+          tagIds.map((tagId: string) => ({ postId: oldPost.id, tagId }))
+        );
       }
     }
 

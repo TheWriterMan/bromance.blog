@@ -59,20 +59,14 @@ export default function PostList() {
   // Fetch counts
   const fetchCounts = useCallback(async () => {
     try {
-      const [allRes, pubRes, draftRes, schedRes] = await Promise.all([
-        fetch('/api/posts?status=all&limit=1&excludeContent=true'),
-        fetch('/api/posts?status=published&limit=1&excludeContent=true'),
-        fetch('/api/posts?status=draft&limit=1&excludeContent=true'),
-        fetch('/api/posts?status=scheduled&limit=1&excludeContent=true'),
-      ]);
-      const [allData, pubData, draftData, schedData] = await Promise.all([
-        allRes.json(), pubRes.json(), draftRes.json(), schedRes.json(),
-      ]);
+      const res = await fetch('/api/posts/counts');
+      if (!res.ok) throw new Error('Failed to fetch counts');
+      const data = await res.json();
       setCounts({
-        all: allData.metadata?.total || 0,
-        published: pubData.metadata?.total || 0,
-        draft: draftData.metadata?.total || 0,
-        scheduled: schedData.metadata?.total || 0,
+        all: data.all || 0,
+        published: data.published || 0,
+        draft: data.draft || 0,
+        scheduled: data.scheduled || 0,
       });
     } catch (err) {
       console.error('Failed to fetch counts:', err);
