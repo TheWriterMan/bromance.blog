@@ -15,7 +15,7 @@ export default function PostCard({ post }: PostCardProps) {
     <Link 
       href={`/${post.slug}`}
       aria-label={`Read dossier: ${post.title}`}
-      className="group block border-b border-stone-200 pb-8 pt-4 hover:bg-stone-100/50 transition-colors focus:outline-none focus:ring-2 focus:ring-stone-500 cursor-pointer"
+      className="group block border-b border-stone-200 pb-8 pt-4 hover:bg-stone-100/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:rounded cursor-pointer"
       id={`post-card-${post.id}`}
     >
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">

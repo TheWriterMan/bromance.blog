@@ -22,7 +22,7 @@ export default function CmsShell({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
 
-  const currentSection = SECTION_LABELS[pathname] || 'Journal Desk';
+  const currentSection = SECTION_LABELS[pathname] || 'CMS';
 
   async function handleLogout() {
     await fetch('/api/auth', { method: 'DELETE' });

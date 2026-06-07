@@ -79,7 +79,7 @@ export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
         {/* Header */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-200">
           <span className="font-display font-bold text-base text-zinc-900 tracking-tight">
-            Journal Desk
+            CMS
           </span>
           <button
             onClick={onClose}

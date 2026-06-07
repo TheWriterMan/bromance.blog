@@ -41,7 +41,7 @@ export default function SidebarNav({ collapsed, onToggleCollapse }: SidebarNavPr
       <div className="h-14 flex items-center border-b border-zinc-200 px-4">
         {!collapsed && (
           <span className="font-display font-bold text-base text-zinc-900 tracking-tight truncate">
-            Journal Desk
+            CMS
           </span>
         )}
       </div>
