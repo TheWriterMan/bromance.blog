@@ -7,6 +7,7 @@ import { DESIGN } from '@/lib/design';
 // Sub-components
 import BlogHeader from './blog/blog-header';
 import CategoryFilter from './blog/category-filter';
+import HeroBanner from './blog/hero-banner';
 import PostCard from './blog/post-card';
 import PostDetail from './blog/post-detail';
 import SearchBar from './blog/search-bar';
@@ -88,6 +89,9 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 selection:bg-red-950 selection:text-white font-sans" id="blog-screen-container">
+      {/* Hero Banner */}
+      <HeroBanner />
+
       {/* Editorial Header */}
       <BlogHeader 
         onResetFilters={handleResetFilters} 

@@ -5,6 +5,8 @@ import { ArrowLeft, Feather, Calendar } from 'lucide-react';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
+import PostLikes from './post-likes';
+import PostComments from './post-comments';
 
 interface PostDetailProps {
   post: any;
@@ -108,6 +110,12 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
           </div>
         </div>
       )}
+
+      {/* Likes and Comments */}
+      <div className="mt-16 pt-8 border-t-2 border-stone-200 space-y-12">
+        <PostLikes postId={post.id} />
+        <PostComments postId={post.id} />
+      </div>
     </article>
   );
 }

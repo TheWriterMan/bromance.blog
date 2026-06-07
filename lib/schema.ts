@@ -67,3 +67,20 @@ export const redirects = pgTable("redirects", {
   permanent: integer("permanent").default(1).notNull(), // 1 for 301, 0 for 302
   createdAt: text("created_at").notNull(),
 });
+
+
+// Likes and comments — tables must be created in Supabase before these work
+export const postLikes = pgTable("post_likes", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  postId: varchar("post_id", { length: 50 }).references(() => posts.id, { onDelete: 'cascade' }).notNull(),
+  visitorId: varchar("visitor_id", { length: 100 }).notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const comments = pgTable("comments", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  postId: varchar("post_id", { length: 50 }).references(() => posts.id, { onDelete: 'cascade' }).notNull(),
+  authorName: text("author_name"),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+});
