@@ -17,6 +17,9 @@ import BubbleMenu from './bubble-menu';
 import FloatingInsert from './floating-insert';
 import EditorHeader from './editor-header';
 import SettingsPanel from './settings-panel';
+import { CodeBlockHighlight } from './extensions/code-block-highlight';
+import { TableExtensions } from './extensions/table-block';
+import { CalloutExtension } from './extensions/callout-block';
 import RecoveryPrompt from './recovery-prompt';
 import OfflineIndicator from './offline-indicator';
 import { createSlashCommandsExtension } from './slash-menu';
@@ -286,10 +289,14 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     extensions: [
       StarterKit.configure({
         dropcursor: false,
+        codeBlock: false,
       }),
       UnderlineExtension,
       DragAndDropExtension,
       DropCursor.configure({ color: '#a1a1aa', width: 2 }),
+      CodeBlockHighlight,
+      ...TableExtensions,
+      CalloutExtension,
       ImageExtension.configure({
         HTMLAttributes: {
           class: 'w-full max-h-[440px] object-cover rounded-lg border border-zinc-200 my-6',

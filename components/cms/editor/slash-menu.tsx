@@ -113,7 +113,15 @@ const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Highlighted info block',
     icon: <MessageSquare className="h-4 w-4" />,
     command: (editor) => {
-      editor.chain().focus().toggleBlockquote().run();
+      editor.chain().focus().setCallout({ type: 'info' }).run();
+    },
+  },
+  {
+    title: 'Table',
+    description: 'Insert a 3x3 table',
+    icon: <Table className="h-4 w-4" />,
+    command: (editor) => {
+      editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     },
   },
 ];
