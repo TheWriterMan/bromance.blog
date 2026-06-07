@@ -49,8 +49,8 @@ export default function PostLikes({ postId }: PostLikesProps) {
       disabled={liked || loading}
       className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
         liked
-          ? 'bg-red-50 border-red-200 text-red-700 cursor-default'
-          : 'border-stone-300 text-stone-600 hover:border-red-300 hover:text-red-700 hover:bg-red-50 cursor-pointer'
+          ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 cursor-default'
+          : 'border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 hover:border-red-300 dark:hover:border-red-700 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 cursor-pointer'
       }`}
       aria-label={liked ? 'Liked' : 'Like this post'}
     >

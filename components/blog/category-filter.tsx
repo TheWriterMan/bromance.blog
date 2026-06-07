@@ -39,13 +39,13 @@ export default function CategoryFilter({
   }
 
   return (
-    <nav aria-label="Category Filter" className="flex items-center space-x-4 border-y border-stone-200 py-3 overflow-x-auto scrollbar-none" id="category-filter">
+    <nav aria-label="Category Filter" className="flex items-center space-x-4 border-y border-stone-200 dark:border-stone-700 py-3 overflow-x-auto scrollbar-none" id="category-filter">
       <button
         onClick={() => onSelectCategory(null)}
         className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest whitespace-nowrap transition-all focus:outline-none focus:ring-2 focus:ring-stone-500 ${
           !selectedCategory
-            ? 'bg-stone-800 text-stone-50'
-            : 'text-stone-500 hover:text-stone-900 border border-transparent hover:border-stone-300'
+            ? 'bg-stone-800 dark:bg-stone-200 text-stone-50 dark:text-stone-900'
+            : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 border border-transparent hover:border-stone-300 dark:hover:border-stone-600'
         }`}
         id="btn-category-all"
         aria-pressed={!selectedCategory}
@@ -62,10 +62,10 @@ export default function CategoryFilter({
             disabled={!catId}
             className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest whitespace-nowrap transition-all focus:outline-none focus:ring-2 focus:ring-stone-500 ${
               active
-                ? 'bg-stone-800 text-stone-50'
+                ? 'bg-stone-800 dark:bg-stone-200 text-stone-50 dark:text-stone-900'
                 : !catId
-                ? 'text-stone-300 cursor-not-allowed'
-                : 'text-stone-500 hover:text-stone-900 border border-transparent hover:border-stone-300'
+                ? 'text-stone-300 dark:text-stone-600 cursor-not-allowed'
+                : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 border border-transparent hover:border-stone-300 dark:hover:border-stone-600'
             }`}
             id={`btn-category-${nav.slug}`}
             aria-pressed={active}

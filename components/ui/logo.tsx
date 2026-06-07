@@ -27,8 +27,8 @@ export default function Logo({ size = 'md', showText = true, className = '' }: L
         className="rounded"
       />
       {showText && (
-        <span className="font-display font-bold text-xl tracking-tight text-stone-900">
-          Bro<span className="text-red-800">mance</span>
+        <span className="font-display font-bold text-xl tracking-tight text-stone-900 dark:text-stone-100">
+          Bro<span className="text-red-800 dark:text-red-400">mance</span>
         </span>
       )}
     </span>

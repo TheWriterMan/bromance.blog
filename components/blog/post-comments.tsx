@@ -64,12 +64,12 @@ export default function PostComments({ postId }: PostCommentsProps) {
 
   return (
     <div className="space-y-8">
-      <h3 className="text-lg font-display font-bold text-stone-900">
+      <h3 className="text-lg font-display font-bold text-stone-900 dark:text-stone-100">
         Comments {comments.length > 0 && `(${comments.length})`}
       </h3>
 
       {/* Comment form */}
-      <form onSubmit={handleSubmit} className="space-y-4 border border-stone-200 rounded-lg p-4 bg-white">
+      <form onSubmit={handleSubmit} className="space-y-4 border border-stone-200 dark:border-stone-700 rounded-lg p-4 bg-white dark:bg-stone-900">
         <div>
           <input
             type="text"
@@ -77,7 +77,7 @@ export default function PostComments({ postId }: PostCommentsProps) {
             value={name}
             onChange={e => setName(e.target.value)}
             maxLength={100}
-            className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-stone-200 dark:border-stone-700 rounded-md bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -88,14 +88,14 @@ export default function PostComments({ postId }: PostCommentsProps) {
             required
             maxLength={2000}
             rows={3}
-            className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent resize-y"
+            className="w-full px-3 py-2 text-sm border border-stone-200 dark:border-stone-700 rounded-md bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent resize-y"
           />
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={submitting || !content.trim()}
-          className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-md hover:bg-stone-800 dark:hover:bg-stone-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {submitting ? 'Posting...' : 'Post comment'}
         </button>
@@ -105,12 +105,12 @@ export default function PostComments({ postId }: PostCommentsProps) {
       {comments.length > 0 && (
         <div className="space-y-4">
           {comments.map(comment => (
-            <div key={comment.id} className="border-b border-stone-100 pb-4 last:border-0">
+            <div key={comment.id} className="border-b border-stone-100 dark:border-stone-800 pb-4 last:border-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-stone-800">{comment.author_name}</span>
-                <span className="text-xs text-stone-400">{formatDate(comment.created_at)}</span>
+                <span className="text-sm font-medium text-stone-800 dark:text-stone-200">{comment.author_name}</span>
+                <span className="text-xs text-stone-400 dark:text-stone-500">{formatDate(comment.created_at)}</span>
               </div>
-              <p className="text-sm text-stone-600 whitespace-pre-wrap">{comment.content}</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400 whitespace-pre-wrap">{comment.content}</p>
             </div>
           ))}
         </div>

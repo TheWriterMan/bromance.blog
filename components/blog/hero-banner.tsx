@@ -1,8 +1,24 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 const HERO_IMAGE_URL = 'https://res.cloudinary.com/dtperak4e/image/upload/q_auto,f_auto,w_1920/bromance-blog/hero-banner.jpg';
 
 export default function HeroBanner() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Check initial state
+    setIsDark(document.documentElement.classList.contains('dark'));
+
+    // Watch for class changes on <html>
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section className="relative w-full h-screen overflow-hidden" id="hero-banner">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -12,7 +28,15 @@ export default function HeroBanner() {
         className="absolute inset-0 w-full h-full object-cover"
         fetchPriority="high"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-stone-50" />
+      <div
+        className="absolute inset-0"
+        suppressHydrationWarning
+        style={{
+          background: isDark
+            ? 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent, rgb(12,10,9))'
+            : 'linear-gradient(to bottom, rgba(0,0,0,0.3), transparent, rgb(250,250,249))'
+        }}
+      />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
         <h1 className="font-display text-5xl sm:text-7xl md:text-8xl font-bold text-white drop-shadow-lg tracking-tight">
           BROMANCE

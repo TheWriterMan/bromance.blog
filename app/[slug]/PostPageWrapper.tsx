@@ -6,7 +6,7 @@ import BlogHeader from '@/components/blog/blog-header';
 
 export default function PostPageWrapper({ post }: { post: any & { author?: { displayName: string; slug: string } } }) {
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 font-sans selection:bg-red-950 selection:text-white">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col text-stone-900 dark:text-stone-100 font-sans selection:bg-red-950 selection:text-white">
       <BlogHeader onResetFilters={() => { window.location.href = '/'; }} />
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12">
         <PostDetail 
@@ -17,9 +17,9 @@ export default function PostPageWrapper({ post }: { post: any & { author?: { dis
           onSelectTag={(slug) => { window.location.href = `/?tag=${slug}`; }} 
         />
       </main>
-      <footer className="border-t border-stone-200 bg-stone-900 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center">
+      <footer className="border-t border-stone-200 dark:border-stone-800 bg-stone-900 dark:bg-stone-950 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <p>© 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
+          <p>&copy; 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
         </div>
       </footer>
     </div>

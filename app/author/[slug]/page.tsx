@@ -68,13 +68,13 @@ export default async function AuthorPage(props: { params: Promise<{ slug: string
   };
 
   return (
-    <div className="bg-stone-50 text-stone-900">
+    <div className="bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="max-w-5xl mx-auto px-6 py-16 flex items-center gap-6 border-b border-stone-200">
-        <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 bg-stone-200">
+      <div className="max-w-5xl mx-auto px-6 py-16 flex items-center gap-6 border-b border-stone-200 dark:border-stone-800">
+        <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 bg-stone-200 dark:bg-stone-800">
           {author.avatarUrl ? (
             <Image
               src={author.avatarUrl}
@@ -86,15 +86,15 @@ export default async function AuthorPage(props: { params: Promise<{ slug: string
               unoptimized
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-500 text-3xl font-bold">
+            <div className="w-full h-full flex items-center justify-center text-stone-500 dark:text-stone-400 text-3xl font-bold">
               {author.displayName[0]?.toUpperCase() || 'A'}
             </div>
           )}
         </div>
         <div>
-          <h1 className="font-display text-3xl font-bold text-stone-900 mb-2">{author.displayName}</h1>
+          <h1 className="font-display text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">{author.displayName}</h1>
           {author.bio && (
-            <p className="text-stone-500 max-w-2xl text-sm leading-relaxed">{author.bio}</p>
+            <p className="text-stone-500 dark:text-stone-400 max-w-2xl text-sm leading-relaxed">{author.bio}</p>
           )}
         </div>
       </div>

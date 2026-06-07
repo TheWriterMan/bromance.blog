@@ -19,7 +19,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory || null);
   const [selectedTag, setSelectedTag] = useState<string | null>(initialTag || null);
   const [page, setPage] = useState(1);
@@ -39,9 +38,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
         }
         if (selectedTag) {
           url += `&tag=${selectedTag}`;
-        }
-        if (searchQuery) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
         }
 
         const [catRes, postsRes] = await Promise.all([
@@ -74,21 +70,20 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
     }
     loadData();
     return () => { active = false; };
-  }, [selectedCategory, selectedTag, searchQuery, retry, page]);
+  }, [selectedCategory, selectedTag, retry, page]);
 
   function handleResetFilters() {
     setSelectedCategory(null);
     setSelectedTag(null);
-    setSearchQuery('');
     setPage(1);
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col text-stone-900 selection:bg-red-950 selection:text-white font-sans" id="blog-screen-container">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col text-stone-900 dark:text-stone-100 selection:bg-red-950 selection:text-white font-sans" id="blog-screen-container">
       {/* Hero Banner */}
       <HeroBanner />
 
-      {/* Sticky Header with Nav + Search */}
+      {/* Sticky Header with Nav */}
       <BlogHeader
         onResetFilters={handleResetFilters}
         categories={categories}
@@ -98,8 +93,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
           setSelectedTag(null);
           setPage(1);
         }}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
       />
 
       {/* Main Area */}
@@ -109,22 +102,22 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
             {/* Left Main Posts Directory Block */}
             <div className="flex-1 space-y-10" id="blog-feed-left-pane">
               
-              <div className="border-b border-stone-800 pb-8 mb-4">
-                <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-900 mb-4">
+              <div className="border-b border-stone-200 dark:border-stone-800 pb-8 mb-4">
+                <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-900 dark:text-stone-100 mb-4">
                   Latest Posts
                 </h1>
-                <p className="font-sans text-lg text-stone-600 max-w-2xl">
+                <p className="font-sans text-lg text-stone-600 dark:text-stone-400 max-w-2xl">
                   Donghua, drama, manga, and novel reviews. Browse below or filter by category.
                 </p>
               </div>
 
               {/* Feed Grid cards */}
               {error ? (
-                <div className="text-center py-12 border border-stone-200 bg-stone-100 rounded p-6" id="blog-feed-error">
-                  <p className="text-red-800 font-mono text-sm mb-4">Error loading posts: {error}</p>
+                <div className="text-center py-12 border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-900 rounded p-6" id="blog-feed-error">
+                  <p className="text-red-800 dark:text-red-400 font-mono text-sm mb-4">Error loading posts: {error}</p>
                   <button
                     onClick={() => setRetry(prev => prev + 1)}
-                    className="px-4 py-2 bg-stone-900 text-stone-50 font-mono text-xs uppercase tracking-widest hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-500 rounded transition-colors"
+                    className="px-4 py-2 bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 font-mono text-xs uppercase tracking-widest hover:bg-stone-800 dark:hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-500 rounded transition-colors"
                     id="btn-retry-feed"
                     aria-label="Retry loading publications"
                   >
@@ -135,25 +128,25 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                 <div className="space-y-12 py-6" id="blog-feed-loading">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="flex flex-col md:flex-row gap-8 animate-pulse">
-                      <div className="w-full md:w-64 h-48 bg-stone-200 rounded shrink-0"></div>
+                      <div className="w-full md:w-64 h-48 bg-stone-200 dark:bg-stone-800 rounded shrink-0"></div>
                       <div className="flex-1 space-y-4">
-                        <div className="h-4 bg-stone-200 w-32 rounded"></div>
-                        <div className="h-8 bg-stone-200 w-3/4 rounded"></div>
-                        <div className="h-20 bg-stone-200 w-full rounded"></div>
+                        <div className="h-4 bg-stone-200 dark:bg-stone-800 w-32 rounded"></div>
+                        <div className="h-8 bg-stone-200 dark:bg-stone-800 w-3/4 rounded"></div>
+                        <div className="h-20 bg-stone-200 dark:bg-stone-800 w-full rounded"></div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : posts.length === 0 ? (
-                <div className="text-center py-20 border border-stone-200 bg-white rounded p-8" id="blog-feed-empty">
-                  <h3 className="font-display font-medium text-stone-900 text-2xl mb-2">No posts found</h3>
-                  <p className="font-sans text-stone-500 text-lg max-w-sm mx-auto mb-6">
-                    {searchQuery ? `The query "${searchQuery}" returned no results.` : 'No posts match this filter.'}
+                <div className="text-center py-20 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 rounded p-8" id="blog-feed-empty">
+                  <h3 className="font-display font-medium text-stone-900 dark:text-stone-100 text-2xl mb-2">No posts found</h3>
+                  <p className="font-sans text-stone-500 dark:text-stone-400 text-lg max-w-sm mx-auto mb-6">
+                    No posts match this filter.
                   </p>
-                  {(searchQuery || selectedCategory || selectedTag) && (
+                  {(selectedCategory || selectedTag) && (
                     <button
                       onClick={handleResetFilters}
-                      className="px-4 py-2 border border-stone-300 text-stone-700 font-mono text-xs uppercase tracking-widest hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500 rounded transition-colors"
+                      className="px-4 py-2 border border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-300 font-mono text-xs uppercase tracking-widest hover:bg-stone-50 dark:hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-500 rounded transition-colors"
                       id="btn-clear-filters"
                       aria-label="Clear all applied filters"
                     >
@@ -176,15 +169,15 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
                       <button
                         disabled={page === 1}
                         onClick={() => setPage(page - 1)}
-                        className={`text-xs font-mono uppercase tracking-widest px-4 py-2 border rounded ${page === 1 ? 'border-stone-200 text-stone-400 cursor-not-allowed' : 'border-stone-300 text-stone-800 hover:bg-stone-100'}`}
+                        className={`text-xs font-mono uppercase tracking-widest px-4 py-2 border rounded ${page === 1 ? 'border-stone-200 dark:border-stone-700 text-stone-400 dark:text-stone-600 cursor-not-allowed' : 'border-stone-300 dark:border-stone-600 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'}`}
                       >
                         &larr; Previous
                       </button>
-                      <span className="text-xs font-mono text-stone-500 uppercase tracking-widest">Page {page} of {totalPages}</span>
+                      <span className="text-xs font-mono text-stone-500 dark:text-stone-400 uppercase tracking-widest">Page {page} of {totalPages}</span>
                       <button
                         disabled={page >= totalPages}
                         onClick={() => setPage(page + 1)}
-                        className={`text-xs font-mono uppercase tracking-widest px-4 py-2 border rounded ${page >= totalPages ? 'border-stone-200 text-stone-400 cursor-not-allowed' : 'border-stone-300 text-stone-800 hover:bg-stone-100'}`}
+                        className={`text-xs font-mono uppercase tracking-widest px-4 py-2 border rounded ${page >= totalPages ? 'border-stone-200 dark:border-stone-700 text-stone-400 dark:text-stone-600 cursor-not-allowed' : 'border-stone-300 dark:border-stone-600 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'}`}
                       >
                         Next &rarr;
                       </button>
@@ -197,8 +190,8 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
             {/* Sticky Sidebar */}
             <aside className="w-full lg:w-72 space-y-10" id="blog-feed-sidebar">
               {/* Tag cloud widget */}
-              <div className="bg-white p-6 border border-stone-200 rounded">
-                <h3 className="font-display font-bold text-lg border-b border-stone-200 pb-2 mb-4">Tags</h3>
+              <div className="bg-white dark:bg-stone-900 p-6 border border-stone-200 dark:border-stone-700 rounded">
+                <h3 className="font-display font-bold text-lg border-b border-stone-200 dark:border-stone-700 pb-2 mb-4 text-stone-900 dark:text-stone-100">Tags</h3>
                 <TagCloud 
                   posts={posts}
                   selectedTag={selectedTag}
@@ -213,9 +206,9 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-stone-200 bg-stone-900 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center" id="blog-footer">
+      <footer className="border-t border-stone-200 dark:border-stone-800 bg-stone-900 dark:bg-stone-950 py-12 mt-auto text-xs text-stone-400 font-mono tracking-widest text-center" id="blog-footer">
         <div className="max-w-6xl mx-auto px-6">
-          <p>© 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
+          <p>&copy; 2026 BROMANCE. ALL RIGHTS RESERVED.</p>
         </div>
       </footer>
     </div>
