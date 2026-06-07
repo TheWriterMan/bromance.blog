@@ -194,24 +194,20 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onloadend = async () => {
-                    const base64 = reader.result as string;
-                    try {
-                      const res = await fetch('/api/media', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: file.name, base64 }),
-                      });
-                      if (res.ok) {
-                        const data = await res.json();
-                        onFeaturedImageSelect(data.cloudinary_id);
-                      }
-                    } catch (err) {
-                      console.error('Upload failed', err);
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  try {
+                    const res = await fetch('/api/media/upload', {
+                      method: 'POST',
+                      body: formData,
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      onFeaturedImageSelect(data.cloudinary_id);
                     }
-                  };
-                  reader.readAsDataURL(file);
+                  } catch (err) {
+                    console.error('Upload failed', err);
+                  }
                 }}
               />
             </label>

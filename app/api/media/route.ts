@@ -31,42 +31,14 @@ export async function GET() {
   }
 }
 
+/**
+ * @deprecated Use POST /api/media/upload with multipart/form-data instead.
+ * This endpoint is kept for backward compatibility but should not be used for new uploads.
+ */
 export async function POST(req: NextRequest) {
-  try {
-    const data = await req.json();
-    const { filename, format, width, height, bytes, base64 } = data;
-
-    // Generate simulated Cloudinary public ID or use provided base64
-    const randomHex = Math.random().toString(36).substring(2, 10);
-    const generatedCloudinaryId = base64 || `blog/uploads/${randomHex}`;
-
-    const id = `med-${Date.now()}`;
-    const newMediaItem = {
-      id,
-      cloudinaryId: generatedCloudinaryId,
-      filename: filename || `uploaded-image-${randomHex}.jpg`,
-      width: width || 1200,
-      height: height || 800,
-      format: format || 'jpg',
-      bytes: bytes || Math.floor(Math.random() * 200000) + 50000,
-      createdAt: new Date().toISOString()
-    };
-
-    await db.insert(schema.mediaItems).values(newMediaItem);
-
-    // Return mapped to match the exact same API signature (camel to snake)
-    return NextResponse.json({
-      id: newMediaItem.id,
-      cloudinary_id: newMediaItem.cloudinaryId,
-      filename: newMediaItem.filename,
-      width: newMediaItem.width,
-      height: newMediaItem.height,
-      format: newMediaItem.format,
-      bytes: newMediaItem.bytes,
-      created_at: newMediaItem.createdAt
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Media upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload/register media' }, { status: 500 });
-  }
+  // Redirect to the new upload endpoint guidance
+  return NextResponse.json(
+    { error: 'This endpoint is deprecated. Use POST /api/media/upload with multipart/form-data.' },
+    { status: 410 }
+  );
 }

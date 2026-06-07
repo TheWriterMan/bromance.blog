@@ -5,16 +5,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getCloudinaryUrl(publicId: string | null | undefined): string {
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '';
+
+type CloudinaryPreset = 'content' | 'featured' | 'thumbnail' | 'raw';
+
+const TRANSFORMS: Record<CloudinaryPreset, string> = {
+  content: 'q_auto,f_auto,w_800',
+  featured: 'q_auto,f_auto,w_1200',
+  thumbnail: 'q_auto,f_auto,w_200,h_200,c_fill',
+  raw: 'q_auto,f_auto',
+};
+
+export function getCloudinaryUrl(
+  publicId: string | null | undefined,
+  preset: CloudinaryPreset = 'content'
+): string {
   if (!publicId) return 'https://picsum.photos/seed/blog/800/450';
+  // Already a full URL — pass through
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) return publicId;
+  // Legacy base64 — return as-is (should be migrated away)
   if (publicId.startsWith('data:image/')) return publicId;
-  if (publicId.startsWith('samples/')) {
-    if (publicId.includes('typography')) return 'https://picsum.photos/seed/typography/1200/675';
-    if (publicId.includes('code')) return 'https://picsum.photos/seed/code/1200/675';
-    if (publicId.includes('workspace')) return 'https://picsum.photos/seed/workspace/1200/675';
-  }
-  return `https://picsum.photos/seed/${publicId.replace(/\//g, '_')}/1200/675`;
+
+  const transforms = TRANSFORMS[preset];
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
 }
 
 export function formatDate(dateStr: string | null | undefined): string {

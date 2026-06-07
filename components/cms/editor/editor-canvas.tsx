@@ -19,7 +19,22 @@ import EditorHeader from './editor-header';
 import SettingsPanel from './settings-panel';
 import { createSlashCommandsExtension } from './slash-menu';
 
-// ---- Drag & Drop plugin (preserved from original) ----
+// ---- Upload helper ----
+async function uploadFileToCloudinary(file: File): Promise<{ url: string; cloudinary_id: string } | null> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/media/upload', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+    return { url: data.url, cloudinary_id: data.cloudinary_id };
+  } catch (err) {
+    console.error('Image upload failed:', err);
+    return null;
+  }
+}
+
+// ---- Drag & Drop plugin (uploads to Cloudinary, no base64 in HTML) ----
 function createDragDropPlugin() {
   return new Plugin({
     props: {
@@ -29,21 +44,30 @@ function createDragDropPlugin() {
           if (file.type.startsWith('image/')) {
             event.preventDefault();
             const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-              const base64 = e.target?.result as string;
-              if (coordinates) {
-                const node = view.state.schema.nodes.image.create({ src: base64, alt: file.name });
-                const transaction = view.state.tr.insert(coordinates.pos, node);
-                view.dispatch(transaction);
-              }
-              fetch('/api/media', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: file.name, base64 }),
-              }).catch(console.error);
-            };
-            reader.readAsDataURL(file);
+
+            // Insert placeholder, then replace with real URL after upload
+            const placeholderSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjRmNGY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSIjYTFhMWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VXBsb2FkaW5n4oCmPC90ZXh0Pjwvc3ZnPg==';
+
+            if (coordinates) {
+              const node = view.state.schema.nodes.image.create({ src: placeholderSrc, alt: file.name });
+              const tr = view.state.tr.insert(coordinates.pos, node);
+              view.dispatch(tr);
+            }
+
+            uploadFileToCloudinary(file).then((result) => {
+              if (!result) return;
+              // Find and replace the placeholder image
+              view.state.doc.descendants((node, pos) => {
+                if (node.type.name === 'image' && node.attrs.src === placeholderSrc) {
+                  const tr = view.state.tr.setNodeMarkup(pos, undefined, {
+                    ...node.attrs,
+                    src: result.url,
+                  });
+                  view.dispatch(tr);
+                  return false;
+                }
+              });
+            });
             return true;
           }
         }
@@ -54,19 +78,26 @@ function createDragDropPlugin() {
           const file = event.clipboardData.files[0];
           if (file.type.startsWith('image/')) {
             event.preventDefault();
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-              const base64 = e.target?.result as string;
-              const node = view.state.schema.nodes.image.create({ src: base64, alt: file.name });
-              const transaction = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(transaction);
-              fetch('/api/media', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: file.name, base64 }),
-              }).catch(console.error);
-            };
-            reader.readAsDataURL(file);
+
+            const placeholderSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjRmNGY1Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSIjYTFhMWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VXBsb2FkaW5n4oCmPC90ZXh0Pjwvc3ZnPg==';
+
+            const node = view.state.schema.nodes.image.create({ src: placeholderSrc, alt: file.name });
+            const tr = view.state.tr.replaceSelectionWith(node);
+            view.dispatch(tr);
+
+            uploadFileToCloudinary(file).then((result) => {
+              if (!result) return;
+              view.state.doc.descendants((nodeInner, pos) => {
+                if (nodeInner.type.name === 'image' && nodeInner.attrs.src === placeholderSrc) {
+                  const updateTr = view.state.tr.setNodeMarkup(pos, undefined, {
+                    ...nodeInner.attrs,
+                    src: result.url,
+                  });
+                  view.dispatch(updateTr);
+                  return false;
+                }
+              });
+            });
             return true;
           }
         }

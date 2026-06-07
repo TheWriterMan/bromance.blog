@@ -81,8 +81,25 @@ const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Insert an image from URL',
     icon: <Image className="h-4 w-4" />,
     command: (editor) => {
-      const url = window.prompt('Image URL');
-      if (url) editor.chain().focus().setImage({ src: url }).run();
+      // Trigger file upload via hidden input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await fetch('/api/media/upload', { method: 'POST', body: formData });
+          if (!res.ok) throw new Error('Upload failed');
+          const data = await res.json();
+          editor.chain().focus().setImage({ src: data.url, alt: file.name }).run();
+        } catch (err) {
+          console.error('Image upload failed:', err);
+        }
+      };
+      input.click();
     },
   },
   {

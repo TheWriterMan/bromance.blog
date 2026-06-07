@@ -99,7 +99,26 @@ export default function FloatingInsert({ editor }: FloatingInsertProps) {
     { title: 'Numbered List', icon: <ListOrdered className="h-4 w-4" />, action: () => editor.chain().focus().toggleOrderedList().run() },
     { title: 'Blockquote', icon: <Quote className="h-4 w-4" />, action: () => editor.chain().focus().toggleBlockquote().run() },
     { title: 'Code Block', icon: <Code className="h-4 w-4" />, action: () => editor.chain().focus().toggleCodeBlock().run() },
-    { title: 'Image', icon: <Image className="h-4 w-4" />, action: () => { const url = window.prompt('Image URL'); if (url) editor.chain().focus().setImage({ src: url }).run(); } },
+    { title: 'Image', icon: <Image className="h-4 w-4" />, action: () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const res = await fetch('/api/media/upload', { method: 'POST', body: formData });
+          if (!res.ok) throw new Error('Upload failed');
+          const data = await res.json();
+          editor.chain().focus().setImage({ src: data.url, alt: file.name }).run();
+        } catch (err) {
+          console.error('Image upload failed:', err);
+        }
+      };
+      input.click();
+    } },
     { title: 'Divider', icon: <Minus className="h-4 w-4" />, action: () => editor.chain().focus().setHorizontalRule().run() },
   ];
 
