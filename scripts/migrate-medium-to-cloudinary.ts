@@ -3,48 +3,37 @@
  * upload to Cloudinary, update post content/featured_image, register in media_items.
  *
  * Run with: npx tsx scripts/migrate-medium-to-cloudinary.ts
+ * Dry run:  DRY_RUN=1 npx tsx scripts/migrate-medium-to-cloudinary.ts
  *
- * Requires env vars: DATABASE_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY,
- * CLOUDINARY_API_SECRET, CLOUDINARY_FOLDER
- *
- * Features:
- * - Deduplication: tracks source_url → cloudinary public_id so re-runs don't create duplicates
- * - Resume-safe: processes one post at a time, commits each update individually
- * - Dry-run mode: set DRY_RUN=1 to preview without modifying anything
- * - Handles: featured_image, og_image, inline <img src="..."> in content
+ * All credentials are hardcoded — no .env needed.
  */
 
 import { v2 as cloudinary } from 'cloudinary';
 import postgres from 'postgres';
 import crypto from 'crypto';
 
+// --- HARDCODED CREDENTIALS ---
+const CLOUD_NAME = 'dtperak4e';
+const API_KEY = '436427533766122';
+const API_SECRET = 'CCf-JYwGF-SGn4P6jnvfXoOC-CE';
+const FOLDER = 'bromance-blog';
+const DATABASE_URL = 'postgres://postgres.whlhkshlhantpsbqohaz:FalnVKSVAkCUtw2s@aws-1-ap-south-1.pooler.supabase.com:6543/postgres';
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: CLOUD_NAME,
+  api_key: API_KEY,
+  api_secret: API_SECRET,
 });
 
-const FOLDER = process.env.CLOUDINARY_FOLDER || 'bromance';
-const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 const DRY_RUN = process.env.DRY_RUN === '1';
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 
-if (!DATABASE_URL) {
-  console.error('DATABASE_URL is not set');
-  process.exit(1);
-}
+// Need the actual DB password — script will check connection on start
+const dbUrl = process.env.DATABASE_URL || DATABASE_URL;
+const sql = postgres(dbUrl, { prepare: false, max: 1, ssl: 'require' });
 
-if (!CLOUD_NAME) {
-  console.error('CLOUDINARY_CLOUD_NAME is not set');
-  process.exit(1);
-}
-
-const sql = postgres(DATABASE_URL, { prepare: false, max: 1 });
-
-// In-memory dedup map: source URL → { public_id, secure_url }
+// In-memory dedup map: source URL → result
 const migrated = new Map<string, { public_id: string; secure_url: string; width: number; height: number; format: string; bytes: number }>();
 
-// Domains we consider "external" (not Cloudinary)
 function isExternalImageUrl(url: string): boolean {
   if (!url || !url.startsWith('http')) return false;
   if (url.includes('res.cloudinary.com')) return false;
@@ -52,10 +41,9 @@ function isExternalImageUrl(url: string): boolean {
   return true;
 }
 
-// Generate a deterministic public_id from source URL (for dedup across runs)
 function deterministicId(sourceUrl: string): string {
   const hash = crypto.createHash('sha256').update(sourceUrl).digest('hex').slice(0, 12);
-  return `migrated-${hash}`;
+  return `medium-${hash}`;
 }
 
 async function downloadImage(url: string): Promise<Buffer | null> {
@@ -69,25 +57,24 @@ async function downloadImage(url: string): Promise<Buffer | null> {
       return null;
     }
     const contentType = response.headers.get('content-type') || '';
-    if (!contentType.startsWith('image/')) {
+    if (!contentType.startsWith('image/') && !contentType.includes('octet-stream')) {
       console.warn(`    ⚠ Not an image (${contentType}): ${url}`);
       return null;
     }
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     if (buffer.length < 100) {
-      console.warn(`    ⚠ Image too small (${buffer.length} bytes), likely broken: ${url}`);
+      console.warn(`    ⚠ Image too small (${buffer.length} bytes): ${url}`);
       return null;
     }
     return buffer;
   } catch (err: any) {
-    console.warn(`    ⚠ Download error: ${err.message} — ${url}`);
+    console.warn(`    ⚠ Download error: ${err.message}`);
     return null;
   }
 }
 
 async function uploadToCloudinary(buffer: Buffer, sourceUrl: string): Promise<{ public_id: string; secure_url: string; width: number; height: number; format: string; bytes: number } | null> {
-  // Check dedup map first
   if (migrated.has(sourceUrl)) {
     return migrated.get(sourceUrl)!;
   }
@@ -107,7 +94,7 @@ async function uploadToCloudinary(buffer: Buffer, sourceUrl: string): Promise<{ 
         bytes: existing.bytes,
       };
       migrated.set(sourceUrl, result);
-      console.log(`    ↩ Already in Cloudinary: ${existing.public_id}`);
+      console.log(`    ↩ Already exists: ${existing.public_id}`);
       return result;
     }
   } catch {
@@ -115,7 +102,6 @@ async function uploadToCloudinary(buffer: Buffer, sourceUrl: string): Promise<{ 
   }
 
   try {
-    // Detect mime from buffer magic bytes
     let mimeType = 'image/jpeg';
     if (buffer[0] === 0x89 && buffer[1] === 0x50) mimeType = 'image/png';
     else if (buffer[0] === 0x47 && buffer[1] === 0x49) mimeType = 'image/gif';
@@ -150,22 +136,17 @@ async function uploadToCloudinary(buffer: Buffer, sourceUrl: string): Promise<{ 
 
 async function processUrl(url: string): Promise<{ public_id: string; secure_url: string; width: number; height: number; format: string; bytes: number } | null> {
   if (!isExternalImageUrl(url)) return null;
-
-  // Check dedup
-  if (migrated.has(url)) {
-    return migrated.get(url)!;
-  }
+  if (migrated.has(url)) return migrated.get(url)!;
 
   console.log(`    → Downloading: ${url.slice(0, 80)}…`);
   const buffer = await downloadImage(url);
   if (!buffer) return null;
 
-  console.log(`    → Uploading to Cloudinary (${(buffer.length / 1024).toFixed(0)} KB)…`);
+  console.log(`    → Uploading (${(buffer.length / 1024).toFixed(0)} KB)…`);
   return await uploadToCloudinary(buffer, url);
 }
 
 async function registerInMediaItems(result: { public_id: string; secure_url: string; width: number; height: number; format: string; bytes: number }, sourceUrl: string) {
-  // Check if already registered
   const existing = await sql`
     SELECT id FROM media_items WHERE cloudinary_id = ${result.public_id} LIMIT 1
   `;
@@ -181,14 +162,30 @@ async function registerInMediaItems(result: { public_id: string; secure_url: str
   `;
 }
 
-async function migratePostContent() {
-  console.log('\n=== Migrating post content ===');
+async function main() {
+  console.log('=== Medium → Cloudinary Migration ===');
+  console.log(`Cloud: ${CLOUD_NAME}`);
+  console.log(`Folder: ${FOLDER}`);
+  console.log(`Dry run: ${DRY_RUN ? 'YES' : 'NO'}`);
+  console.log('');
 
-  const posts = await sql`
-    SELECT id, title, content, featured_image, og_image FROM posts
-  `;
+  // Test DB connection
+  try {
+    const [{ now }] = await sql`SELECT now()`;
+    console.log(`DB connected: ${now}`);
+  } catch (err: any) {
+    console.error(`DB connection failed: ${err.message}`);
+    console.error('Set DATABASE_URL env var with the full Supabase connection string (including password).');
+    process.exit(1);
+  }
 
-  console.log(`Found ${posts.length} posts to scan\n`);
+  if (!DRY_RUN) {
+    console.log('\n⚠️  Will modify data. Ctrl+C within 3s to abort.');
+    await new Promise(r => setTimeout(r, 3000));
+  }
+
+  const posts = await sql`SELECT id, title, content, featured_image, og_image FROM posts`;
+  console.log(`\nFound ${posts.length} posts to scan\n`);
 
   const imgSrcRegex = /src="(https?:\/\/[^"]+)"/g;
   let totalMigrated = 0;
@@ -196,12 +193,12 @@ async function migratePostContent() {
 
   for (const post of posts) {
     const title = (post.title as string).slice(0, 50);
-    console.log(`\n📄 Post: "${title}" (${post.id})`);
+    console.log(`\n📄 "${title}" (${post.id})`);
 
     let contentUpdated = false;
     let content = post.content as string;
 
-    // --- Migrate inline images in content ---
+    // --- Inline images in content ---
     const matches: string[] = [];
     let match;
     imgSrcRegex.lastIndex = 0;
@@ -212,32 +209,32 @@ async function migratePostContent() {
     }
 
     if (matches.length > 0) {
-      console.log(`  Found ${matches.length} external image(s) in content`);
+      console.log(`  ${matches.length} external image(s) in content`);
     }
 
     for (const imgUrl of matches) {
       const result = await processUrl(imgUrl);
       if (result) {
-        // In content HTML, replace with full Cloudinary secure_url
+        // In HTML content, use the full secure_url (rendered via dangerouslySetInnerHTML)
         content = content.split(imgUrl).join(result.secure_url);
         contentUpdated = true;
-        await registerInMediaItems(result, imgUrl);
+        if (!DRY_RUN) await registerInMediaItems(result, imgUrl);
         totalMigrated++;
-        console.log(`    ✓ Migrated → ${result.public_id}`);
+        console.log(`    ✓ → ${result.public_id}`);
       } else {
         totalFailed++;
       }
     }
 
-    // --- Migrate featured_image ---
+    // --- Featured image ---
     let featuredImage = post.featured_image as string;
     if (isExternalImageUrl(featuredImage)) {
-      console.log(`  Featured image is external: ${featuredImage.slice(0, 60)}…`);
+      console.log(`  Featured image is external`);
       const result = await processUrl(featuredImage);
       if (result) {
-        // featured_image stores public_id (getCloudinaryUrl builds the full URL)
+        // featured_image stores public_id (getCloudinaryUrl builds full URL from it)
         featuredImage = result.public_id;
-        await registerInMediaItems(result, post.featured_image as string);
+        if (!DRY_RUN) await registerInMediaItems(result, post.featured_image as string);
         totalMigrated++;
         console.log(`    ✓ Featured → ${result.public_id}`);
       } else {
@@ -245,13 +242,12 @@ async function migratePostContent() {
       }
     }
 
-    // --- Migrate og_image ---
+    // --- OG image ---
     let ogImage = (post.og_image as string) || '';
     if (isExternalImageUrl(ogImage)) {
-      console.log(`  OG image is external: ${ogImage.slice(0, 60)}…`);
+      console.log(`  OG image is external`);
       const result = await processUrl(ogImage);
       if (result) {
-        // og_image can store the full URL since it's used directly in meta tags
         ogImage = result.secure_url;
         totalMigrated++;
         console.log(`    ✓ OG → ${result.public_id}`);
@@ -260,7 +256,7 @@ async function migratePostContent() {
       }
     }
 
-    // --- Update post if anything changed ---
+    // --- Update DB ---
     if (!DRY_RUN && (contentUpdated || featuredImage !== post.featured_image || ogImage !== (post.og_image || ''))) {
       await sql`
         UPDATE posts
@@ -269,38 +265,21 @@ async function migratePostContent() {
             og_image = ${ogImage || null}
         WHERE id = ${post.id}
       `;
-      console.log(`  💾 Post updated in database`);
+      console.log(`  💾 Updated`);
     } else if (DRY_RUN && (contentUpdated || featuredImage !== post.featured_image)) {
-      console.log(`  [DRY RUN] Would update this post`);
+      console.log(`  [DRY RUN] Would update`);
     }
 
-    // Small delay to be nice to APIs
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 300));
   }
 
-  console.log(`\n=== Migration complete ===`);
-  console.log(`  Migrated: ${totalMigrated}`);
-  console.log(`  Failed: ${totalFailed}`);
-  console.log(`  Dedup cache size: ${migrated.size}`);
-}
-
-async function main() {
-  console.log('=== Medium → Cloudinary Migration ===');
-  console.log(`Cloud: ${CLOUD_NAME}`);
-  console.log(`Folder: ${FOLDER}`);
-  console.log(`Dry run: ${DRY_RUN ? 'YES (no writes)' : 'NO (will modify data)'}`);
-  console.log('');
-
-  if (!DRY_RUN) {
-    console.log('⚠️  This will modify post data. Press Ctrl+C within 3 seconds to abort.');
-    await new Promise(r => setTimeout(r, 3000));
-  }
-
-  await migratePostContent();
+  console.log(`\n=== Done ===`);
+  console.log(`Migrated: ${totalMigrated}`);
+  console.log(`Failed: ${totalFailed}`);
   await sql.end();
 }
 
 main().catch((err) => {
-  console.error('Migration failed:', err);
+  console.error('Fatal:', err);
   process.exit(1);
 });
