@@ -69,6 +69,17 @@ export const redirects = pgTable("redirects", {
 });
 
 
+// Authors — single-author blog, one row expected
+export const authors = pgTable("authors", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  displayName: text("display_name").notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  bio: text("bio"),
+  avatarUrl: text("avatar_url"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 // Likes and comments — tables must be created in Supabase before these work
 export const postLikes = pgTable("post_likes", {
   id: varchar("id", { length: 50 }).primaryKey(),

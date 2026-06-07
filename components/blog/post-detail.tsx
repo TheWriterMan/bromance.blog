@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Feather, Calendar } from 'lucide-react';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
 import Image from 'next/image';
@@ -15,6 +15,22 @@ interface PostDetailProps {
 }
 
 export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProps) {
+  const [authorName, setAuthorName] = useState('Amy97');
+  const [authorSlug, setAuthorSlug] = useState('amy97');
+
+  useEffect(() => {
+    async function fetchAuthor() {
+      try {
+        const res = await fetch('/api/authors');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.display_name) setAuthorName(data.display_name);
+          if (data.slug) setAuthorSlug(data.slug);
+        }
+      } catch {}
+    }
+    fetchAuthor();
+  }, []);
   return (
     <article className="max-w-3xl mx-auto animate-fade-in" id={`post-detail-${post.id}`}>
       {/* Back Nav Link */}
@@ -43,7 +59,9 @@ export default function PostDetail({ post, onBack, onSelectTag }: PostDetailProp
         <div className="flex flex-wrap items-center text-xs text-stone-500 gap-x-4 gap-y-2 mb-6 font-mono uppercase tracking-widest">
           <span className="flex items-center font-bold text-stone-800">
             <Feather className="h-3.5 w-3.5 mr-1.5" />
-            Amy97
+            <Link href={`/author/${authorSlug}`} className="hover:text-red-900 transition-colors">
+              {authorName}
+            </Link>
           </span>
           <span className="text-stone-300">|</span>
           <span className="flex items-center">

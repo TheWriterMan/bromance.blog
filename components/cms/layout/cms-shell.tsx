@@ -13,6 +13,7 @@ const SECTION_LABELS: Record<string, string> = {
   '/cms/media': 'Media',
   '/cms/categories': 'Categories',
   '/cms/tags': 'Tags',
+  '/cms/authors': 'Author',
   '/cms/settings': 'Settings',
 };
 

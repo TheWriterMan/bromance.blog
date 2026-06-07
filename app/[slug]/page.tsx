@@ -66,7 +66,8 @@ export default async function PostPage(props: { params: Promise<{ slug: string }
     notFound();
   }
 
-  // Load category and tags to match PostDetail expectation in parallel
+  // Load category, tags, and author in parallel
+  let authorData = { displayName: 'Amy97', slug: 'amy97' };
   const [categoriesList, joinedTags] = await Promise.all([
     db.select().from(schema.categories).where(eq(schema.categories.id, post.categoryId || '')),
     db.select({
@@ -78,6 +79,14 @@ export default async function PostPage(props: { params: Promise<{ slug: string }
     .innerJoin(schema.tags, eq(schema.postTags.tagId, schema.tags.id))
     .where(eq(schema.postTags.postId, post.id))
   ]);
+
+  // Fetch author (non-blocking — fallback to default if table missing)
+  try {
+    const authorRows = await db.select().from(schema.authors).limit(1);
+    if (authorRows[0]) {
+      authorData = { displayName: authorRows[0].displayName, slug: authorRows[0].slug };
+    }
+  } catch {}
   
   const category = categoriesList[0] || null;
 
@@ -98,8 +107,8 @@ export default async function PostPage(props: { params: Promise<{ slug: string }
       image: post.ogImage || post.featuredImage || '',
       author: {
         '@type': 'Person',
-        name: 'Amy97',
-        url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/amy97`
+        name: authorData.displayName,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/${authorData.slug}`
       },
       datePublished: post.publishedAt || post.createdAt,
       dateModified: post.updatedAt,

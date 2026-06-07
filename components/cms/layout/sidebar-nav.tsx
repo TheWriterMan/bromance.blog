@@ -9,6 +9,7 @@ import {
   Image,
   FolderOpen,
   Tag,
+  UserCircle,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: '/cms/media', label: 'Media', icon: Image },
   { href: '/cms/categories', label: 'Categories', icon: FolderOpen },
   { href: '/cms/tags', label: 'Tags', icon: Tag },
+  { href: '/cms/authors', label: 'Author', icon: UserCircle },
   { href: '/cms/settings', label: 'Settings', icon: Settings },
 ];
 

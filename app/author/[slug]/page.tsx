@@ -1,75 +1,100 @@
 import { Metadata } from 'next';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Blog from '@/components/blog';
 import Image from 'next/image';
 
-const AUTHOR_INFO = {
-  name: 'Amy97',
+// Default fallback if authors table doesn't exist or is empty
+const DEFAULT_AUTHOR = {
+  displayName: 'Amy97',
   slug: 'amy97',
   bio: '',
-  avatar: 'https://picsum.photos/seed/author/150/150',
+  avatarUrl: null as string | null,
 };
+
+async function getAuthor() {
+  try {
+    const rows = await db.select().from(schema.authors).limit(1);
+    return rows[0] || DEFAULT_AUTHOR;
+  } catch {
+    return DEFAULT_AUTHOR;
+  }
+}
 
 export async function generateMetadata(
   props: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
   const params = await props.params;
+  const author = await getAuthor();
 
-  if (params.slug !== AUTHOR_INFO.slug) {
+  if (params.slug !== author.slug) {
     return {};
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
 
   return {
-    title: `${AUTHOR_INFO.name} - Author`,
-    description: AUTHOR_INFO.bio,
+    title: `${author.displayName} - Author`,
+    description: author.bio || `Posts by ${author.displayName}`,
     alternates: {
-      canonical: `${baseUrl}/author/${AUTHOR_INFO.slug}`,
+      canonical: `${baseUrl}/author/${author.slug}`,
     },
     openGraph: {
-      title: `${AUTHOR_INFO.name} - Author`,
-      description: AUTHOR_INFO.bio,
-      url: `${baseUrl}/author/${AUTHOR_INFO.slug}`,
+      title: `${author.displayName} - Author`,
+      description: author.bio || `Posts by ${author.displayName}`,
+      url: `${baseUrl}/author/${author.slug}`,
       type: 'profile',
-      images: [{ url: AUTHOR_INFO.avatar }]
+      images: author.avatarUrl ? [{ url: author.avatarUrl }] : [],
     },
   };
 }
 
 export default async function AuthorPage(props: { params: Promise<{ slug: string }> }) {
   const params = await props.params;
+  const author = await getAuthor();
 
-  if (params.slug !== AUTHOR_INFO.slug) {
+  if (params.slug !== author.slug) {
     notFound();
   }
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Person',
-    name: AUTHOR_INFO.name,
-    description: AUTHOR_INFO.bio,
-    image: AUTHOR_INFO.avatar,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/${AUTHOR_INFO.slug}`,
+    name: author.displayName,
+    description: author.bio || '',
+    image: author.avatarUrl || '',
+    url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/author/${author.slug}`,
   };
 
   return (
-    <div className="bg-white text-zinc-900">
+    <div className="bg-stone-50 text-stone-900">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="max-w-5xl mx-auto px-6 py-16 flex items-center gap-6 border-b border-zinc-100">
-        <div className="w-24 h-24 rounded-full overflow-hidden mb-4 shrink-0">
-          <Image src={AUTHOR_INFO.avatar} alt={AUTHOR_INFO.name} width={96} height={96} className="object-cover" referrerPolicy="no-referrer" />
+      <div className="max-w-5xl mx-auto px-6 py-16 flex items-center gap-6 border-b border-stone-200">
+        <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 bg-stone-200">
+          {author.avatarUrl ? (
+            <Image
+              src={author.avatarUrl}
+              alt={author.displayName}
+              width={96}
+              height={96}
+              className="object-cover w-full h-full"
+              referrerPolicy="no-referrer"
+              unoptimized
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-stone-500 text-3xl font-bold">
+              {author.displayName[0]?.toUpperCase() || 'A'}
+            </div>
+          )}
         </div>
         <div>
-          <h1 className="font-sans text-3xl font-bold text-zinc-900 mb-2">{AUTHOR_INFO.name}</h1>
-          {AUTHOR_INFO.bio && (
-            <p className="text-zinc-500 max-w-2xl text-sm leading-relaxed mb-4">{AUTHOR_INFO.bio}</p>
+          <h1 className="font-display text-3xl font-bold text-stone-900 mb-2">{author.displayName}</h1>
+          {author.bio && (
+            <p className="text-stone-500 max-w-2xl text-sm leading-relaxed">{author.bio}</p>
           )}
         </div>
       </div>
