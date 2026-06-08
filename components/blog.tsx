@@ -80,9 +80,6 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col text-stone-900 dark:text-stone-100 selection:bg-red-950 selection:text-white font-sans" id="blog-screen-container">
-      {/* Hero Banner */}
-      <HeroBanner />
-
       {/* Sticky Header with Nav */}
       <BlogHeader
         onResetFilters={handleResetFilters}
@@ -94,6 +91,9 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
           setPage(1);
         }}
       />
+
+      {/* Hero Banner */}
+      <HeroBanner />
 
       {/* Main Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12" id="blog-main-content">

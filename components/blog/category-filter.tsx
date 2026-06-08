@@ -3,18 +3,6 @@
 import React from 'react';
 import { Category } from '@/lib/db';
 
-/**
- * Curated top-level nav categories.
- * These map to category slugs in the database.
- */
-const NAV_CATEGORIES = [
-  { label: 'Drama', slug: 'drama' },
-  { label: 'Manga', slug: 'manga' },
-  { label: 'Donghua', slug: 'donghua' },
-  { label: 'Novel', slug: 'novel' },
-  { label: 'Random', slug: 'random' },
-];
-
 interface CategoryFilterProps {
   categories: Category[];
   selectedCategory: string | null;
@@ -26,18 +14,6 @@ export default function CategoryFilter({
   selectedCategory,
   onSelectCategory,
 }: CategoryFilterProps) {
-  // Map nav slugs to actual category IDs from the database
-  function getCategoryIdBySlug(slug: string): string | null {
-    const cat = categories.find(c => c.slug === slug);
-    return cat ? cat.id : null;
-  }
-
-  // Check if the current selection matches a nav item
-  function isActive(slug: string): boolean {
-    const catId = getCategoryIdBySlug(slug);
-    return catId !== null && selectedCategory === catId;
-  }
-
   return (
     <nav aria-label="Category Filter" className="flex items-center space-x-4 border-y border-stone-200 dark:border-stone-700 py-3 overflow-x-auto scrollbar-none" id="category-filter">
       <button
@@ -52,25 +28,21 @@ export default function CategoryFilter({
       >
         All
       </button>
-      {NAV_CATEGORIES.map((nav) => {
-        const catId = getCategoryIdBySlug(nav.slug);
-        const active = isActive(nav.slug);
+      {categories.map((cat) => {
+        const active = selectedCategory === cat.id;
         return (
           <button
-            key={nav.slug}
-            onClick={() => onSelectCategory(active ? null : catId)}
-            disabled={!catId}
+            key={cat.id}
+            onClick={() => onSelectCategory(active ? null : cat.id)}
             className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest whitespace-nowrap transition-all focus:outline-none focus:ring-2 focus:ring-stone-500 ${
               active
                 ? 'bg-stone-800 dark:bg-stone-200 text-stone-50 dark:text-stone-900'
-                : !catId
-                ? 'text-stone-300 dark:text-stone-600 cursor-not-allowed'
                 : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 border border-transparent hover:border-stone-300 dark:hover:border-stone-600'
             }`}
-            id={`btn-category-${nav.slug}`}
+            id={`btn-category-${cat.slug}`}
             aria-pressed={active}
           >
-            {nav.label}
+            {cat.name}
           </button>
         );
       })}

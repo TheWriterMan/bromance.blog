@@ -1,27 +1,17 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { X, User, History } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Tag, MediaItem, PostRevision } from '@/lib/db';
-import { getCloudinaryUrl } from '@/lib/utils';
+import { Tag, PostRevision } from '@/lib/db';
 
 interface SettingsPanelProps {
   open: boolean;
-  status: 'draft' | 'published' | 'scheduled';
-  onStatusChange: (status: 'draft' | 'published' | 'scheduled') => void;
-  publishedAt: string;
-  onPublishedAtChange: (date: string) => void;
-  authorName: string;
-  slug: string;
-  onSlugChange: (slug: string) => void;
   summary: string;
   onSummaryChange: (summary: string) => void;
   tags: Tag[];
   selectedTagIds: string[];
   onToggleTag: (tagId: string) => void;
-  featuredImage: string;
-  onFeaturedImageSelect: (id: string) => void;
   metaTitle: string;
   onMetaTitleChange: (v: string) => void;
   metaDescription: string;
@@ -32,7 +22,6 @@ interface SettingsPanelProps {
   onNoindexChange: (v: number) => void;
   ogImage: string;
   onOgImageChange: (v: string) => void;
-  mediaItems: MediaItem[];
   revisions: PostRevision[];
   postId: string | null;
   onRestoreRevision: (revisionId: string) => void;
@@ -41,12 +30,11 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel(props: SettingsPanelProps) {
   const {
-    open, status, onStatusChange, publishedAt, onPublishedAtChange,
-    authorName, slug, onSlugChange, summary, onSummaryChange,
-    tags, selectedTagIds, onToggleTag, featuredImage, onFeaturedImageSelect,
+    open, summary, onSummaryChange,
+    tags, selectedTagIds, onToggleTag,
     metaTitle, onMetaTitleChange, metaDescription, onMetaDescriptionChange,
     canonicalUrl, onCanonicalUrlChange, noindex, onNoindexChange,
-    ogImage, onOgImageChange, mediaItems, revisions, postId,
+    ogImage, onOgImageChange, revisions, postId,
     onRestoreRevision, onClose,
   } = props;
 
@@ -90,52 +78,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
-        {/* Status */}
-        <FieldGroup label="Status">
-          <select
-            value={status}
-            onChange={(e: any) => onStatusChange(e.target.value)}
-            className="w-full px-3 py-2.5 border border-zinc-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-500 min-h-[44px]"
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="scheduled">Scheduled</option>
-          </select>
-        </FieldGroup>
-
-        {/* Publish Date */}
-        <FieldGroup label="Publish Date">
-          <input
-            type="date"
-            value={publishedAt}
-            onChange={(e) => onPublishedAtChange(e.target.value)}
-            className="w-full px-3 py-2.5 border border-zinc-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-500 min-h-[44px]"
-          />
-        </FieldGroup>
-
-        {/* Author */}
-        <FieldGroup label="Author">
-          <div className="flex items-center gap-2 px-3 py-2.5 border border-zinc-200 rounded-md bg-zinc-50 min-h-[44px]">
-            <User className="h-3.5 w-3.5 text-zinc-400" />
-            <span className="text-sm text-zinc-500">{authorName}</span>
-          </div>
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Slug */}
-        <FieldGroup label="URL Slug">
-          <input
-            type="text"
-            value={slug}
-            onChange={(e) => onSlugChange(e.target.value)}
-            placeholder="my-post-slug"
-            className="w-full px-3 py-2.5 border border-zinc-200 rounded-md text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-zinc-500 min-h-[44px]"
-          />
-        </FieldGroup>
-
-        <Separator />
-
         {/* Summary */}
         <FieldGroup label="Summary / Excerpt">
           <textarea
@@ -169,73 +111,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               );
             })}
           </div>
-        </FieldGroup>
-
-        <Separator />
-
-        {/* Cover Image */}
-        <FieldGroup label="Cover Image">
-          <div className="aspect-video w-full rounded-lg bg-zinc-100 overflow-hidden border border-zinc-200">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getCloudinaryUrl(featuredImage)}
-              alt="Cover"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            <label className="w-full min-h-[44px] flex items-center justify-center text-xs border border-zinc-200 rounded-md text-zinc-600 hover:bg-zinc-100 cursor-pointer transition-colors">
-              Upload New Image
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  try {
-                    const res = await fetch('/api/media/upload', {
-                      method: 'POST',
-                      body: formData,
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      onFeaturedImageSelect(data.cloudinary_id);
-                    }
-                  } catch (err) {
-                    console.error('Upload failed', err);
-                  }
-                }}
-              />
-            </label>
-          </div>
-
-          {mediaItems.length > 0 && (
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {mediaItems.slice(0, 8).map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onFeaturedImageSelect(item.cloudinary_id)}
-                  className={`aspect-square rounded border overflow-hidden min-h-[44px] ${
-                    featuredImage === item.cloudinary_id
-                      ? 'border-zinc-900 ring-2 ring-offset-1 ring-zinc-900'
-                      : 'border-zinc-200 hover:border-zinc-400'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={getCloudinaryUrl(item.cloudinary_id)}
-                    alt="Thumb"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </FieldGroup>
 
         <Separator />

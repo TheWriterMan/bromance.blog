@@ -12,11 +12,11 @@ import UnderlineExtension from '@tiptap/extension-underline';
 import DropCursor from '@tiptap/extension-dropcursor';
 import Youtube from '@tiptap/extension-youtube';
 import { Category, Tag, MediaItem, PostRevision } from '@/lib/db';
-import { getCloudinaryUrl } from '@/lib/utils';
 
 import BubbleMenu from './bubble-menu';
 import FloatingInsert from './floating-insert';
 import EditorHeader from './editor-header';
+import DocumentHeader from './document-header';
 import SettingsPanel from './settings-panel';
 import { CodeBlockHighlight } from './extensions/code-block-highlight';
 import { TableExtensions } from './extensions/table-block';
@@ -172,7 +172,6 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   const [categoryId, setCategoryId] = useState('');
   const [featuredImage, setFeaturedImage] = useState('samples/workspace');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [authorName] = useState('Amy97');
 
   // SEO
   const [metaTitle, setMetaTitle] = useState('');
@@ -538,11 +537,6 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     );
   }
 
-  function handleTitleInput(e: React.FormEvent<HTMLDivElement>) {
-    const text = (e.target as HTMLDivElement).textContent || '';
-    setTitle(text);
-  }
-
   function handleTitleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -589,17 +583,24 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
             {/* Floating insert button */}
             {tipTapEditor && <FloatingInsert editor={tipTapEditor} />}
 
-            {/* Contenteditable title */}
-            <div
-              ref={titleRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleTitleInput}
-              onKeyDown={handleTitleKeyDown}
-              data-placeholder="Untitled"
-              className="w-full text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900 outline-none mb-6 empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-200 empty:before:pointer-events-none"
-              role="textbox"
-              aria-label="Post title"
+            {/* Document Header: cover + title + meta row */}
+            <DocumentHeader
+              title={title}
+              onTitleChange={setTitle}
+              onTitleKeyDown={handleTitleKeyDown}
+              titleRef={titleRef}
+              featuredImage={featuredImage}
+              onFeaturedImageChange={setFeaturedImage}
+              categories={categories}
+              categoryId={categoryId}
+              onCategoryChange={setCategoryId}
+              slug={slug}
+              onSlugChange={setSlug}
+              publishedAt={publishedAt}
+              onPublishedAtChange={setPublishedAt}
+              status={status}
+              onStatusChange={setStatus}
+              mediaItems={mediaItems}
             />
 
             {/* TipTap content */}
@@ -613,20 +614,11 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
         {/* Settings panel */}
         <SettingsPanel
           open={settingsOpen}
-          status={status}
-          onStatusChange={setStatus}
-          publishedAt={publishedAt}
-          onPublishedAtChange={setPublishedAt}
-          authorName={authorName}
-          slug={slug}
-          onSlugChange={setSlug}
           summary={summary}
           onSummaryChange={setSummary}
           tags={tags}
           selectedTagIds={selectedTagIds}
           onToggleTag={handleToggleTag}
-          featuredImage={featuredImage}
-          onFeaturedImageSelect={setFeaturedImage}
           metaTitle={metaTitle}
           onMetaTitleChange={setMetaTitle}
           metaDescription={metaDescription}
@@ -637,7 +629,6 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           onNoindexChange={setNoindex}
           ogImage={ogImage}
           onOgImageChange={setOgImage}
-          mediaItems={mediaItems}
           revisions={revisions}
           postId={postId}
           onRestoreRevision={restoreRevision}
