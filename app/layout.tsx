@@ -24,9 +24,12 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://bromance.blog'),
-  title: 'Bromance - Donghua, Drama & Manga',
-  description: 'Reviews, recommendations, and deep dives into donghua, drama, manga, and novels.',
-  keywords: ['Donghua', 'Drama', 'Manga', 'Novel', 'Anime', 'Reviews'],
+  title: {
+    default: 'Bromance',
+    template: '%s | Bromance',
+  },
+  description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
+  keywords: ['Donghua', 'Chinese Animation', 'Drama', 'Manga', 'Novel', 'Reviews', 'Recommendations'],
   authors: [{ name: 'Amy97' }],
   creator: 'Amy97',
   publisher: 'Bromance',
@@ -36,18 +39,18 @@ export const metadata: Metadata = {
     apple: '/favicon.png',
   },
   openGraph: {
-    title: 'Bromance - Donghua, Drama & Manga',
-    description: 'Reviews, recommendations, and deep dives into donghua, drama, manga, and novels.',
+    title: 'Bromance',
+    description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
     type: 'website',
     url: 'https://bromance.blog',
     siteName: 'Bromance',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Bromance' }],
+    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Bromance' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bromance - Donghua, Drama & Manga',
-    description: 'Reviews, recommendations, and deep dives into donghua, drama, manga, and novels.',
-    images: ['/og-image.png'],
+    title: 'Bromance',
+    description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
+    images: ['/logo.png'],
   },
   robots: {
     index: true,
@@ -110,8 +113,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "Bromance",
-              "url": "${process.env.NEXT_PUBLIC_SITE_URL || ''}",
-              "logo": "${process.env.NEXT_PUBLIC_SITE_URL || ''}/og-image.png"
+              "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}",
+              "logo": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/logo.png"
             }
           `}
         </Script>

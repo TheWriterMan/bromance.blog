@@ -35,13 +35,13 @@ export async function generateMetadata(
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
 
   return {
-    title: `${author.displayName} - Author`,
+    title: author.displayName,
     description: author.bio || `Posts by ${author.displayName}`,
     alternates: {
       canonical: `${baseUrl}/author/${author.slug}`,
     },
     openGraph: {
-      title: `${author.displayName} - Author`,
+      title: author.displayName,
       description: author.bio || `Posts by ${author.displayName}`,
       url: `${baseUrl}/author/${author.slug}`,
       type: 'profile',

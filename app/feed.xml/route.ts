@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
     const postsList = await db.select().from(schema.posts).where(eq(schema.posts.status, 'published')).orderBy(desc(schema.posts.publishedAt)).limit(20);
 
     const rssItems = postsList.map((post) => `
@@ -23,9 +23,9 @@ export async function GET() {
     const rssFeed = `<?xml version="1.0" encoding="UTF-8"?>
       <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
         <channel>
-          <title>Clean Blog CMS</title>
+          <title>Bromance</title>
           <link>${baseUrl}</link>
-          <description>An elegant, performance-tuned web blog</description>
+          <description>Donghua, drama, manga, and novel reviews, recaps, and recommendations.</description>
           <language>en</language>
           <atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml" />
           ${rssItems}

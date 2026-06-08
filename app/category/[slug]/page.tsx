@@ -16,17 +16,17 @@ export async function generateMetadata(
     return {};
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
 
   return {
-    title: `${category.name} - Categories`,
-    description: category.description || `Browse publications in the ${category.name} category.`,
+    title: category.name,
+    description: category.description || `Browse posts in the ${category.name} category.`,
     alternates: {
       canonical: `${baseUrl}/category/${category.slug}`,
     },
     openGraph: {
-      title: `${category.name} - Categories`,
-      description: category.description || `Browse publications in the ${category.name} category.`,
+      title: category.name,
+      description: category.description || `Browse posts in the ${category.name} category.`,
       url: `${baseUrl}/category/${category.slug}`,
       type: 'website',
     },

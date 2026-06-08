@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://example.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog';
 
   const postsList = await db
     .select()
@@ -15,6 +15,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const categoriesList = await db.select().from(schema.categories);
   const tagsList = await db.select().from(schema.tags);
+
+  // Fetch author for author page
+  let authorSlug = 'amy97';
+  try {
+    const authorRows = await db.select().from(schema.authors).limit(1);
+    if (authorRows[0]) {
+      authorSlug = authorRows[0].slug;
+    }
+  } catch {}
 
   const posts = postsList
     .filter((post) => post.noindex !== 1)
@@ -45,6 +54,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date().toISOString(),
       changeFrequency: 'daily',
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/author/${authorSlug}`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
     ...posts,
     ...categories,
