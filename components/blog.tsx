@@ -104,10 +104,14 @@ export default function Blog({ initialCategory, initialTag }: BlogProps) {
               
               <div className="border-b border-stone-200 dark:border-stone-800 pb-8 mb-4">
                 <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-900 dark:text-stone-100 mb-4">
-                  Latest Posts
+                  {selectedCategory
+                    ? categories.find(c => c.id === selectedCategory)?.name || 'Posts'
+                    : 'Latest Posts'}
                 </h1>
                 <p className="font-sans text-lg text-stone-600 dark:text-stone-400 max-w-2xl">
-                  Donghua, drama, manga, and novel reviews. Browse below or filter by category.
+                  {selectedCategory
+                    ? `Browse all posts in ${categories.find(c => c.id === selectedCategory)?.name || 'this category'}.`
+                    : 'Donghua, drama, manga, and novel reviews. Browse below or filter by category.'}
                 </p>
               </div>
 
