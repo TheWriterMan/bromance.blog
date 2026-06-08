@@ -24,6 +24,7 @@ export default function EditorHeader({
   status,
 }: EditorHeaderProps) {
   const router = useRouter();
+  const isSaving = savingState === 'saving';
 
   return (
     <header className="shrink-0 bg-white border-b border-zinc-200 z-40 px-3 sm:px-4 h-14 flex items-center justify-between">
@@ -48,13 +49,13 @@ export default function EditorHeader({
           {savingState === 'saved' && (
             <>
               <Check className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="hidden sm:inline">Saved</span>
+              <span className="hidden sm:inline text-emerald-600">Saved</span>
             </>
           )}
           {savingState === 'error' && (
             <>
               <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-              <span className="hidden sm:inline text-red-600">Error</span>
+              <span className="hidden sm:inline text-red-600">Save failed</span>
             </>
           )}
           {savingState === 'idle' && title && (
@@ -65,19 +66,31 @@ export default function EditorHeader({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Save button (visible on desktop) */}
+        {/* Save draft button */}
         <button
           onClick={onSave}
-          className="hidden sm:inline-flex items-center px-3 py-2 text-xs font-medium text-zinc-700 border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors min-h-[44px]"
+          disabled={isSaving}
+          className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-md transition-colors min-h-[44px] ${
+            isSaving
+              ? 'border-zinc-200 text-zinc-400 cursor-not-allowed'
+              : 'border-zinc-300 text-zinc-700 hover:bg-zinc-50'
+          }`}
         >
-          Save
+          {isSaving && <Loader className="h-3.5 w-3.5 animate-spin" />}
+          Save draft
         </button>
 
         {/* Publish / Update button */}
         <button
           onClick={onPublish}
-          className="inline-flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-zinc-900 rounded-md hover:bg-zinc-800 transition-colors min-h-[44px]"
+          disabled={isSaving}
+          className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+            isSaving
+              ? 'bg-zinc-400 text-white cursor-not-allowed'
+              : 'bg-zinc-900 text-white hover:bg-zinc-800'
+          }`}
         >
+          {isSaving && <Loader className="h-3.5 w-3.5 animate-spin" />}
           {status === 'published' ? 'Update' : 'Publish'}
         </button>
 

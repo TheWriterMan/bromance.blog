@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PostFilters from './post-filters';
 import PostRow from './post-row';
@@ -10,6 +10,8 @@ import StatusBadge from '@/components/cms/shared/status-badge';
 import ConfirmDialog from '@/components/cms/shared/confirm-dialog';
 
 type StatusTab = 'all' | 'published' | 'draft' | 'scheduled';
+type SortField = 'title' | 'status' | 'category' | 'updated_at' | 'created_at';
+type SortDir = 'asc' | 'desc';
 
 interface Post {
   id: string;
@@ -45,7 +47,11 @@ export default function PostList() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // Counts per status (fetched once on mount, refreshed after mutations)
+  // Sort state
+  const [sortField, setSortField] = useState<SortField>('updated_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  // Counts per status
   const [counts, setCounts] = useState({ all: 0, published: 0, draft: 0, scheduled: 0 });
 
   // Selection state
@@ -114,6 +120,42 @@ export default function PostList() {
     setSelectedIds(new Set());
   }, [fetchPosts]);
 
+  // Client-side sorting (posts are already paginated from API)
+  const sortedPosts = useMemo(() => {
+    const sorted = [...posts];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'status':
+          cmp = a.status.localeCompare(b.status);
+          break;
+        case 'category':
+          cmp = (a.category?.name || '').localeCompare(b.category?.name || '');
+          break;
+        case 'updated_at':
+          cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+          break;
+        case 'created_at':
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+  }, [posts, sortField, sortDir]);
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'title' || field === 'category' ? 'asc' : 'desc');
+    }
+  }
+
   // Reset page when filters change
   function handleTabChange(tab: StatusTab) {
     setActiveTab(tab);
@@ -173,7 +215,7 @@ export default function PostList() {
     }
   }
 
-  // New post flow — pre-create draft then navigate
+  // New post flow
   async function handleNewPost() {
     try {
       const res = await fetch('/api/posts', {
@@ -210,6 +252,27 @@ export default function PostList() {
   }
 
   const allSelected = posts.length > 0 && selectedIds.size === posts.length;
+
+  function SortHeader({ field, label, className }: { field: SortField; label: string; className?: string }) {
+    const active = sortField === field;
+    return (
+      <th className={`px-3 py-3 ${className || ''}`}>
+        <button
+          onClick={() => handleSort(field)}
+          className={`inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide transition-colors ${
+            active ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          {label}
+          {active ? (
+            sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-40" />
+          )}
+        </button>
+      </th>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -259,14 +322,12 @@ export default function PostList() {
             onClick={() => handleBulkStatusChange('published')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors min-h-[44px]"
           >
-            <ArrowUpDown className="h-3.5 w-3.5" />
             Publish
           </button>
           <button
             onClick={() => handleBulkStatusChange('draft')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors min-h-[44px]"
           >
-            <ArrowUpDown className="h-3.5 w-3.5" />
             Unpublish
           </button>
         </div>
@@ -297,7 +358,7 @@ export default function PostList() {
       ) : isMobile ? (
         /* Mobile card layout */
         <div className="space-y-3">
-          {posts.map((post) => (
+          {sortedPosts.map((post) => (
             <div
               key={post.id}
               onClick={() => router.push(`/cms/posts/${post.id}`)}
@@ -309,6 +370,7 @@ export default function PostList() {
                     {post.title}
                   </h3>
                   <p className="text-xs text-zinc-500 mt-1">
+                    {post.category?.name && <span className="text-zinc-600">{post.category.name} · </span>}
                     {new Date(post.updated_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -344,16 +406,16 @@ export default function PostList() {
                     aria-label="Select all posts"
                   />
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide">Title</th>
-                <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide hidden lg:table-cell">Category</th>
-                <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide">Status</th>
-                <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide hidden md:table-cell">Updated</th>
-                <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide hidden md:table-cell">Views</th>
+                <SortHeader field="title" label="Title" />
+                <SortHeader field="category" label="Category" className="hidden lg:table-cell" />
+                <SortHeader field="status" label="Status" />
+                <SortHeader field="updated_at" label="Updated" className="hidden md:table-cell" />
+                <SortHeader field="created_at" label="Created" className="hidden md:table-cell" />
                 <th className="px-3 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wide text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {posts.map((post) => (
+              {sortedPosts.map((post) => (
                 <PostRow
                   key={post.id}
                   post={post}

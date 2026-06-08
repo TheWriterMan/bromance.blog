@@ -206,7 +206,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       content,
       summary,
       status,
-      category_id: categoryId,
+      category_id: categoryId || null,
       featured_image: featuredImage,
       tagIds: selectedTagIds,
       meta_title: metaTitle,
@@ -255,7 +255,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       content,
       summary,
       status: 'published',
-      category_id: categoryId,
+      category_id: categoryId || null,
       featured_image: featuredImage,
       tagIds: selectedTagIds,
       meta_title: metaTitle,
@@ -381,7 +381,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           setContent(post.content || '');
           setStatus(post.status || 'draft');
           setPublishedAt(post.published_at ? new Date(post.published_at).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10));
-          setCategoryId(post.category_id || catsData[0]?.id || '');
+          setCategoryId(post.category_id || '');
           setFeaturedImage(post.featured_image || 'samples/workspace');
           setSelectedTagIds((post.tags || []).map((t: any) => t.id));
           setMetaTitle(post.meta_title || '');

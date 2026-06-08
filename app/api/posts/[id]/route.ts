@@ -210,7 +210,7 @@ export async function PUT(
       summary: summary !== undefined ? summary : oldPost.summary,
       status: (status !== undefined ? status : oldPost.status) as 'draft' | 'published' | 'scheduled',
       publishedAt: pubDate,
-      categoryId: category_id !== undefined ? category_id : oldPost.categoryId,
+      categoryId: category_id !== undefined ? (category_id || null) : oldPost.categoryId,
       featuredImage: featured_image !== undefined ? featured_image : oldPost.featuredImage,
       metaTitle: meta_title !== undefined ? meta_title : oldPost.metaTitle,
       metaDescription: meta_description !== undefined ? meta_description : oldPost.metaDescription,

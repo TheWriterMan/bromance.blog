@@ -10,8 +10,8 @@ interface PostRowProps {
     id: string;
     title: string;
     status: 'draft' | 'published' | 'scheduled';
+    created_at: string;
     updated_at: string;
-    views: number;
     category?: { id: string; name: string } | null;
   };
   selected: boolean;
@@ -23,7 +23,6 @@ export default function PostRow({ post, selected, onSelect, onDelete }: PostRowP
   const router = useRouter();
 
   function handleRowClick(e: React.MouseEvent) {
-    // Don't navigate if clicking checkbox or action buttons
     const target = e.target as HTMLElement;
     if (target.closest('input[type="checkbox"]') || target.closest('button')) return;
     router.push(`/cms/posts/${post.id}`);
@@ -67,9 +66,11 @@ export default function PostRow({ post, selected, onSelect, onDelete }: PostRowP
         </span>
       </td>
 
-      {/* Views */}
+      {/* Created */}
       <td className="px-3 py-3 hidden md:table-cell">
-        <span className="text-sm text-zinc-500">{(post.views || 0).toLocaleString()}</span>
+        <span className="text-sm text-zinc-500">
+          {new Date(post.created_at).toLocaleDateString()}
+        </span>
       </td>
 
       {/* Actions */}

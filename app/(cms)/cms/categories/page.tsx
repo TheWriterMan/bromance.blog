@@ -214,7 +214,6 @@ export default function CategoriesPage() {
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value, slug: generateSlug(e.target.value) })}
                       onKeyDown={handleEditKeyDown}
-                      onBlur={handleUpdate}
                       className="px-2 py-1.5 text-sm border border-zinc-300 rounded focus:outline-none focus:ring-2 focus:ring-zinc-900 min-h-[44px]"
                       autoFocus
                     />
