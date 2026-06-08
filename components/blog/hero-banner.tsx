@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const HERO_IMAGE_URL = 'https://res.cloudinary.com/dtperak4e/image/upload/q_auto,f_auto,w_1920/bromance-blog/hero-banner.jpg';
+const HERO_IMAGE_URL = '/hero-banner.jpg';
 
 export default function HeroBanner() {
   const [isDark, setIsDark] = useState(false);

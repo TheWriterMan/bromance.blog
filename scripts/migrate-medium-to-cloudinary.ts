@@ -16,7 +16,7 @@ import crypto from 'crypto';
 const CLOUD_NAME = 'dtperak4e';
 const API_KEY = '436427533766122';
 const API_SECRET = 'CCf-JYwGF-SGn4P6jnvfXoOC-CE';
-const FOLDER = 'bromance-blog';
+const FOLDER = 'bromance';
 const DATABASE_URL = 'postgres://postgres.whlhkshlhantpsbqohaz:FalnVKSVAkCUtw2s@aws-1-ap-south-1.pooler.supabase.com:6543/postgres';
 
 cloudinary.config({

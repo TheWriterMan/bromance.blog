@@ -6,6 +6,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const CLOUDINARY_FOLDER = process.env.CLOUDINARY_FOLDER || 'bromance-blog';
+export const CLOUDINARY_FOLDER = process.env.CLOUDINARY_FOLDER || 'bromance';
 
 export default cloudinary;
