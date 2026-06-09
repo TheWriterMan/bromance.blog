@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: var(--font-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-display: var(--font-display), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Responsive YouTube / iframe embeds */
+.youtube-embed,
+div[data-youtube-video] {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.youtube-embed iframe,
+div[data-youtube-video] iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0.5rem;
+}
+
+/* Catch any raw iframes in content */
+.prose iframe,
+.ProseMirror iframe {
+  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 16/9;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+/* Blog post content iframe handling */
+.post-content iframe {
+  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 16/9;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+
+
+/* Dark mode prose overrides */
+.dark .prose {
+  --tw-prose-body: theme(--color-stone-300);
+  --tw-prose-headings: theme(--color-stone-100);
+  --tw-prose-lead: theme(--color-stone-400);
+  --tw-prose-links: theme(--color-red-400);
+  --tw-prose-bold: theme(--color-stone-100);
+  --tw-prose-counters: theme(--color-stone-400);
+  --tw-prose-bullets: theme(--color-stone-500);
+  --tw-prose-hr: theme(--color-stone-700);
+  --tw-prose-quotes: theme(--color-stone-300);
+  --tw-prose-quote-borders: theme(--color-stone-600);
+  --tw-prose-captions: theme(--color-stone-400);
+  --tw-prose-code: theme(--color-stone-200);
+  --tw-prose-pre-code: theme(--color-stone-200);
+  --tw-prose-pre-bg: theme(--color-stone-800);
+  --tw-prose-th-borders: theme(--color-stone-600);
+  --tw-prose-td-borders: theme(--color-stone-700);
+}
+
+/* Fade-in animation */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}

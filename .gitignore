@@ -8,3 +8,4 @@ coverage/
 credentials.md
 package-lock.json
 .kiro/steering/git-identity.md
+.vercel
