@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
-import { eq, and, sql, desc, inArray, ilike, or } from 'drizzle-orm';
+import { eq, and, sql, desc, inArray, ilike, or, isNull } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +13,27 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get('category_id');
     const search = searchParams.get('search');
     const tagSlug = searchParams.get('tag');
+    const type = searchParams.get('type');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const excludeContent = searchParams.get('excludeContent') === 'true';
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     const conditions = [];
+
+    // Exclude soft-deleted posts by default
+    if (!includeDeleted) {
+      conditions.push(isNull(schema.posts.deletedAt));
+    }
 
     // Filter by status
     if (status && status !== 'all') {
       conditions.push(eq(schema.posts.status, status));
+    }
+
+    // Filter by content type
+    if (type) {
+      conditions.push(eq(schema.posts.type, type));
     }
     
     // Filter by Category
@@ -62,7 +74,6 @@ export async function GET(req: NextRequest) {
     // Paginate
     const offset = (page - 1) * limit;
 
-    // Fetch database layers using limit and offset and total count in parallel
     const [totalQuery, postsList] = await Promise.all([
       db.select({ count: sql<number>`cast(count(*) as integer)` }).from(schema.posts).where(whereClause),
       db.select({
@@ -82,7 +93,11 @@ export async function GET(req: NextRequest) {
         canonicalUrl: schema.posts.canonicalUrl,
         noindex: schema.posts.noindex,
         ogImage: schema.posts.ogImage,
-        content: excludeContent ? schema.posts.summary : schema.posts.content, // Fallback sumary instead of content to save memory
+        discussionOpen: schema.posts.discussionOpen,
+        type: schema.posts.type,
+        meta: schema.posts.meta,
+        deletedAt: schema.posts.deletedAt,
+        content: excludeContent ? schema.posts.summary : schema.posts.content,
       })
       .from(schema.posts)
       .where(whereClause)
@@ -96,7 +111,6 @@ export async function GET(req: NextRequest) {
     const postIds = postsList.map(p => p.id);
     const activeCategoryIds = postsList.map(p => p.categoryId).filter(Boolean) as string[];
     
-    // Fetch related categories, tags, and post_tags in parallel (single round trip)
     const [categoriesList, postTagsListResult, tagsList] = await Promise.all([
       activeCategoryIds.length > 0 
         ? db.select().from(schema.categories).where(inArray(schema.categories.id, activeCategoryIds)) 
@@ -106,7 +120,7 @@ export async function GET(req: NextRequest) {
         : Promise.resolve([]),
       db.select().from(schema.tags)
     ]);
-    // Map database structures to API output structures
+
     const categories = categoriesList.map(c => ({
       id: c.id,
       name: c.name,
@@ -132,9 +146,9 @@ export async function GET(req: NextRequest) {
       content: p.content,
       summary: p.summary,
       status: p.status as 'draft' | 'published' | 'scheduled',
-      published_at: p.publishedAt,
-      created_at: p.createdAt,
-      updated_at: p.updatedAt,
+      published_at: p.publishedAt?.toISOString() ?? null,
+      created_at: p.createdAt.toISOString(),
+      updated_at: p.updatedAt.toISOString(),
       category_id: p.categoryId,
       featured_image: p.featuredImage,
       meta_title: p.metaTitle,
@@ -142,7 +156,11 @@ export async function GET(req: NextRequest) {
       canonical_url: p.canonicalUrl,
       noindex: p.noindex,
       ogImage: p.ogImage,
-      views: p.views
+      discussion_open: p.discussionOpen,
+      type: p.type,
+      meta: p.meta,
+      deleted_at: p.deletedAt?.toISOString() ?? null,
+      views: p.views,
     }));
 
     // Enrich posts with category info & tag arrays
@@ -193,6 +211,9 @@ export async function POST(req: NextRequest) {
       canonical_url,
       noindex,
       og_image,
+      discussion_open,
+      type,
+      meta,
       tagIds, 
       published_at 
     } = data;
@@ -207,9 +228,9 @@ export async function POST(req: NextRequest) {
       db.select().from(schema.tags),
     ]);
 
-    const newId = `post-${Date.now()}`;
+    const newId = generateId();
     
-    // Generate slug with targeted conflict check (not loading all posts)
+    // Generate slug with targeted conflict check
     let baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
@@ -221,17 +242,18 @@ export async function POST(req: NextRequest) {
       .from(schema.posts)
       .where(eq(schema.posts.slug, baseSlug))
       .limit(1);
-    const calculatedSlug = conflicts.length > 0 ? `${baseSlug}-${Date.now()}` : baseSlug;
+    const calculatedSlug = conflicts.length > 0 ? `${baseSlug}-${generateId()}` : baseSlug;
 
-    let pubDate: string | null = null;
+    const now = new Date();
+    let pubDate: Date | null = null;
     if (status === 'published') {
-      pubDate = published_at || new Date().toISOString();
+      pubDate = published_at ? new Date(published_at) : now;
     } else if (status === 'scheduled') {
-      pubDate = published_at || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(); // Default 2 days forward
+      pubDate = published_at ? new Date(published_at) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
     }
 
     // Default category ID if none is supplied
-    const fallbackCategory = categoriesList[0]?.id || '';
+    const fallbackCategory = categoriesList[0]?.id || null;
     const activeCategory = category_id || fallbackCategory;
 
     const newPost = {
@@ -242,19 +264,21 @@ export async function POST(req: NextRequest) {
       summary: summary || '',
       status: (status || 'draft') as 'draft' | 'published' | 'scheduled',
       publishedAt: pubDate,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       categoryId: activeCategory,
       featuredImage: featured_image || '',
       metaTitle: meta_title || title,
       metaDescription: meta_description || summary || '',
       canonicalUrl: canonical_url || '',
-      noindex: noindex || 0,
-      ogImage: og_image || '',
-      views: 0
+      noindex: noindex ?? false,
+      ogImage: og_image || null,
+      discussionOpen: discussion_open ?? true,
+      type: type || 'article',
+      meta: meta || {},
+      views: 0,
     };
 
-    // Insert post
     await db.insert(schema.posts).values(newPost);
 
     // Save linked tags (batch insert)
@@ -274,9 +298,9 @@ export async function POST(req: NextRequest) {
       content: newPost.content,
       summary: newPost.summary,
       status: newPost.status,
-      published_at: newPost.publishedAt,
-      created_at: newPost.createdAt,
-      updated_at: newPost.updatedAt,
+      published_at: newPost.publishedAt?.toISOString() ?? null,
+      created_at: newPost.createdAt.toISOString(),
+      updated_at: newPost.updatedAt.toISOString(),
       category_id: newPost.categoryId,
       featured_image: newPost.featuredImage,
       meta_title: newPost.metaTitle,
@@ -284,6 +308,9 @@ export async function POST(req: NextRequest) {
       canonical_url: newPost.canonicalUrl,
       noindex: newPost.noindex,
       ogImage: newPost.ogImage,
+      discussion_open: newPost.discussionOpen,
+      type: newPost.type,
+      meta: newPost.meta,
       views: newPost.views,
       category: matchedCategory,
       tags: matchedTags

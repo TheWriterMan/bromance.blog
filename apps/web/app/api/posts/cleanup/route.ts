@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     for (const post of allPosts) {
       let modified = false;
-      const updates: Partial<{ title: string; content: string; summary: string; updatedAt: string }> = {};
+      const updates: Partial<{ title: string; content: string; summary: string; updatedAt: Date }> = {};
 
       // Clean title
       const cleanedTitle = cleanTitle(post.title);
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (modified) {
-        updates.updatedAt = new Date().toISOString();
+        updates.updatedAt = new Date();
         await db.update(schema.posts).set(updates).where(eq(schema.posts.id, post.id));
         postsModified++;
       }

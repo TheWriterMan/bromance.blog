@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@repo/db';
 import * as schema from '@repo/db';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, isNull } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Single endpoint that returns all status counts in one DB round-trip.
- * Replaces the old pattern of 4 parallel fetch('/api/posts?status=X&limit=1') calls.
+ * Excludes soft-deleted posts.
  */
 export async function GET() {
   try {
@@ -17,6 +17,7 @@ export async function GET() {
         count: sql<number>`cast(count(*) as integer)`,
       })
       .from(schema.posts)
+      .where(isNull(schema.posts.deletedAt))
       .groupBy(schema.posts.status);
 
     const counts = { all: 0, published: 0, draft: 0, scheduled: 0 };

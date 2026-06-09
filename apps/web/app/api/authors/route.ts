@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq } from 'drizzle-orm';
 
@@ -24,7 +24,6 @@ export async function GET() {
     const rows = await db.select().from(schema.authors).limit(1);
 
     if (rows.length === 0) {
-      // Return default (table exists but no row yet)
       return NextResponse.json(DEFAULT_AUTHOR);
     }
 
@@ -35,12 +34,11 @@ export async function GET() {
       slug: a.slug,
       bio: a.bio,
       avatar_url: a.avatarUrl,
-      created_at: a.createdAt,
-      updated_at: a.updatedAt,
+      created_at: a.createdAt.toISOString(),
+      updated_at: a.updatedAt.toISOString(),
     });
   } catch (error: any) {
     if (isTableMissingError(error)) {
-      // Table doesn't exist yet — return hardcoded default
       return NextResponse.json(DEFAULT_AUTHOR);
     }
     console.error('GET /api/authors error:', error?.message || error);
@@ -49,7 +47,6 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  // Auth check
   const cookie = req.cookies.get('cms_logged_in')?.value;
   if (cookie !== 'true') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,15 +60,14 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Display name and slug are required' }, { status: 400 });
     }
 
-    const now = new Date().toISOString();
+    const now = new Date();
 
     // Check if author row exists
     const existing = await db.select().from(schema.authors).limit(1);
 
     if (existing.length === 0) {
-      // Insert new row
       const newAuthor = {
-        id: 'author-1',
+        id: generateId(),
         displayName: display_name.trim(),
         slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, ''),
         bio: bio?.trim() || null,
@@ -87,8 +83,8 @@ export async function PUT(req: NextRequest) {
         slug: newAuthor.slug,
         bio: newAuthor.bio,
         avatar_url: newAuthor.avatarUrl,
-        created_at: newAuthor.createdAt,
-        updated_at: newAuthor.updatedAt,
+        created_at: newAuthor.createdAt.toISOString(),
+        updated_at: newAuthor.updatedAt.toISOString(),
       });
     }
 
@@ -110,8 +106,8 @@ export async function PUT(req: NextRequest) {
       slug: updatePayload.slug,
       bio: updatePayload.bio,
       avatar_url: updatePayload.avatarUrl,
-      created_at: existing[0].createdAt,
-      updated_at: updatePayload.updatedAt,
+      created_at: existing[0].createdAt.toISOString(),
+      updated_at: updatePayload.updatedAt.toISOString(),
     });
   } catch (error: any) {
     if (isTableMissingError(error)) {

@@ -163,18 +163,18 @@ export default function DocumentHeader({
                   <button
                     key={item.id}
                     onClick={() => {
-                      onFeaturedImageChange(item.cloudinary_id);
+                      onFeaturedImageChange(item.cloudinaryId);
                       setCoverPickerOpen(false);
                     }}
                     className={`aspect-square rounded border overflow-hidden transition-all ${
-                      featuredImage === item.cloudinary_id
+                      featuredImage === item.cloudinaryId
                         ? 'border-zinc-900 ring-2 ring-offset-1 ring-zinc-900'
                         : 'border-zinc-200 hover:border-zinc-400'
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={getCloudinaryUrl(item.cloudinary_id)}
+                      src={getCloudinaryUrl(item.cloudinaryId)}
                       alt="Media"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

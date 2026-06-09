@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import cloudinary, { CLOUDINARY_FOLDER } from '@/lib/cloudinary';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { requireAuth } from '@/lib/auth';
 
@@ -34,16 +34,17 @@ export async function POST(req: NextRequest) {
     });
 
     // Store in database
-    const id = `med-${Date.now()}`;
+    const id = generateId();
+    const now = new Date();
     const newMediaItem = {
       id,
       cloudinaryId: result.public_id,
-      filename: file.name || `image-${Date.now()}.${result.format}`,
+      filename: file.name || `image-${id}.${result.format}`,
       width: result.width,
       height: result.height,
       format: result.format,
       bytes: result.bytes,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
 
     await db.insert(schema.mediaItems).values(newMediaItem);
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       height: result.height,
       format: result.format,
       bytes: result.bytes,
-      created_at: newMediaItem.createdAt,
+      created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error: any) {
     console.error('Cloudinary upload error:', error);

@@ -15,7 +15,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { name, slug, description } = await req.json();
+    const { name, slug, description, parent_id } = await req.json();
 
     if (!name || !slug) {
       return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
@@ -31,9 +31,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
+    // Prevent self-referencing parent
+    if (parent_id === id) {
+      return NextResponse.json({ error: 'Category cannot be its own parent' }, { status: 400 });
+    }
+
     await db
       .update(schema.categories)
-      .set({ name, slug, description: description || '' })
+      .set({
+        name,
+        slug,
+        description: description || '',
+        parentId: parent_id !== undefined ? (parent_id || null) : existing[0].parentId,
+      })
       .where(eq(schema.categories.id, id));
 
     const updated = await db
@@ -42,7 +52,14 @@ export async function PUT(
       .where(eq(schema.categories.id, id))
       .limit(1);
 
-    return NextResponse.json(updated[0]);
+    const c = updated[0];
+    return NextResponse.json({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+      parent_id: c.parentId,
+    });
   } catch (error) {
     console.error('Category update error:', error);
     return NextResponse.json({ error: 'Failed to update category' }, { status: 500 });
@@ -58,6 +75,8 @@ export async function DELETE(
 
   try {
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get('permanent') === 'true';
 
     const existing = await db
       .select()
@@ -69,7 +88,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
-    await db.delete(schema.categories).where(eq(schema.categories.id, id));
+    if (permanent) {
+      await db.delete(schema.categories).where(eq(schema.categories.id, id));
+    } else {
+      await db
+        .update(schema.categories)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.categories.id, id));
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

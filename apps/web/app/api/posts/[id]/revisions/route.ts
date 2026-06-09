@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, desc, and } from 'drizzle-orm';
 
@@ -24,7 +24,7 @@ export async function GET(
       title: r.title,
       content: r.content,
       updated_by: r.updatedBy,
-      created_at: r.createdAt
+      created_at: r.createdAt.toISOString(),
     }));
 
     return NextResponse.json(mapped);
@@ -34,7 +34,7 @@ export async function GET(
   }
 }
 
-// POST to /api/posts/[id]/revisions restores the revision
+// POST to /api/posts/[id]/revisions restores a revision
 export async function POST(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -74,33 +74,40 @@ export async function POST(
 
     const revision = matchedRevisions[0];
 
-    // Capture current state as a new revision before restoring, so work is never lost!
+    // Capture current state as a new revision before restoring
     await db.insert(schema.postRevisions).values({
-      id: `rev-${Date.now()}`,
+      id: generateId(),
       postId: currentPost.id,
       title: currentPost.title,
       content: currentPost.content,
-      updatedBy: 'amy97',
-      createdAt: new Date().toISOString()
+      updatedBy: 'auto-snapshot-before-restore',
+      createdAt: new Date(),
     });
 
     // Restore
-    const updatePayload = {
-      title: revision.title,
-      content: revision.content,
-      updatedAt: new Date().toISOString()
-    };
-
+    const now = new Date();
     await db
       .update(schema.posts)
-      .set(updatePayload)
+      .set({
+        title: revision.title,
+        content: revision.content,
+        updatedAt: now,
+      })
       .where(eq(schema.posts.id, id));
 
     return NextResponse.json({
-      ...currentPost,
-      title: updatePayload.title,
-      content: updatePayload.content,
-      updated_at: updatePayload.updatedAt
+      id: currentPost.id,
+      title: revision.title,
+      slug: currentPost.slug,
+      content: revision.content,
+      summary: currentPost.summary,
+      status: currentPost.status,
+      published_at: currentPost.publishedAt?.toISOString() ?? null,
+      created_at: currentPost.createdAt.toISOString(),
+      updated_at: now.toISOString(),
+      category_id: currentPost.categoryId,
+      featured_image: currentPost.featuredImage,
+      views: currentPost.views,
     });
   } catch (error) {
     console.error('Restore revision error:', error);

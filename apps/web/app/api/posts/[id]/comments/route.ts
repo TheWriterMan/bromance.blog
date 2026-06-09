@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, desc } from 'drizzle-orm';
 
@@ -26,7 +26,7 @@ export async function GET(
       id: c.id,
       author_name: c.authorName || 'Anonymous',
       content: c.content,
-      created_at: c.createdAt,
+      created_at: c.createdAt.toISOString(),
     })));
   } catch (error: any) {
     if (isTableMissingError(error)) {
@@ -53,12 +53,24 @@ export async function POST(
       return NextResponse.json({ error: 'Comment too long (max 2000 characters)' }, { status: 400 });
     }
 
+    // Check if discussion is open on the post
+    const [post] = await db
+      .select({ discussionOpen: schema.posts.discussionOpen })
+      .from(schema.posts)
+      .where(eq(schema.posts.id, id))
+      .limit(1);
+
+    if (post && !post.discussionOpen) {
+      return NextResponse.json({ error: 'Discussion is closed on this post' }, { status: 403 });
+    }
+
+    const now = new Date();
     const comment = {
-      id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: generateId(),
       postId: id,
       authorName: authorName?.trim() || null,
       content: content.trim(),
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
 
     await db.insert(schema.comments).values(comment);
@@ -67,7 +79,7 @@ export async function POST(
       id: comment.id,
       author_name: comment.authorName || 'Anonymous',
       content: comment.content,
-      created_at: comment.createdAt,
+      created_at: now.toISOString(),
     }, { status: 201 });
   } catch (error: any) {
     if (isTableMissingError(error)) {
@@ -88,12 +100,10 @@ export async function DELETE(
     const commentId = searchParams.get('commentId');
 
     if (!commentId) {
-      // Delete ALL comments for this post
       await db.delete(schema.comments).where(eq(schema.comments.postId, id));
       return NextResponse.json({ success: true, message: 'All comments deleted' });
     }
 
-    // Delete single comment
     await db.delete(schema.comments).where(eq(schema.comments.id, commentId));
     return NextResponse.json({ success: true, message: 'Comment deleted' });
   } catch (error: any) {

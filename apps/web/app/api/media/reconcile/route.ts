@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import cloudinary from '@/lib/cloudinary';
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         const resource = await cloudinary.api.resource(publicId);
 
         await db.insert(schema.mediaItems).values({
-          id: `med-recon-${Date.now()}-${reconciled}`,
+          id: generateId(),
           cloudinaryId: publicId,
           filename: resource.original_filename
             ? `${resource.original_filename}.${resource.format}`
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
           height: resource.height,
           format: resource.format,
           bytes: resource.bytes,
-          createdAt: resource.created_at || new Date().toISOString(),
+          createdAt: resource.created_at ? new Date(resource.created_at) : new Date(),
         });
 
         reconciled++;

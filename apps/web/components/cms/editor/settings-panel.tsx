@@ -182,7 +182,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 {revisions.map((rev) => (
                   <div key={rev.id} className="p-3 bg-zinc-50 border border-zinc-200 rounded-md flex items-center justify-between min-h-[44px]">
                     <span className="text-xs text-zinc-500 font-mono">
-                      {new Date(rev.created_at).toLocaleTimeString()}
+                      {new Date(rev.createdAt).toLocaleTimeString()}
                     </span>
                     <button
                       onClick={() => onRestoreRevision(rev.id)}

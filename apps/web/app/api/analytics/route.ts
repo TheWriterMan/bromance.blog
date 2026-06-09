@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '@repo/db';
 import * as schema from '@repo/db';
+import { isNull } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const posts = await db.select().from(schema.posts);
-    const categories = await db.select().from(schema.categories);
+    const posts = await db.select().from(schema.posts).where(isNull(schema.posts.deletedAt));
+    const categories = await db.select().from(schema.categories).where(isNull(schema.categories.deletedAt));
     const tags = await db.select().from(schema.tags);
     const postTags = await db.select().from(schema.postTags);
 
@@ -28,7 +29,7 @@ export async function GET() {
         slug: p.slug,
         views: p.views,
         status: p.status,
-        published_at: p.publishedAt
+        published_at: p.publishedAt?.toISOString() ?? null
       }));
 
     // Posts by category count

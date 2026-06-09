@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
@@ -38,12 +38,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Tag slug already exists' }, { status: 400 });
     }
 
-    const id = `tag-${Date.now()}`;
-    const newTag = {
-      id,
-      name,
-      slug: formattedSlug
-    };
+    const id = generateId();
+    const newTag = { id, name, slug: formattedSlug };
 
     await db.insert(schema.tags).values(newTag);
 

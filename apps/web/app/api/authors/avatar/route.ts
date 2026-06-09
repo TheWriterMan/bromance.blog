@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       const existing = await db.select().from(schema.authors).limit(1);
       if (existing.length > 0) {
         await db.update(schema.authors)
-          .set({ avatarUrl, updatedAt: new Date().toISOString() })
+          .set({ avatarUrl, updatedAt: new Date() })
           .where(eq(schema.authors.id, existing[0].id));
       } else {
         // Create author row with avatar
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
           slug: 'amy97',
           bio: null,
           avatarUrl,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
     } catch (dbError: any) {

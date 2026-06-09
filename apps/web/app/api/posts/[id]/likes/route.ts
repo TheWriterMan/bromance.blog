@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@repo/db';
+import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, and, count } from 'drizzle-orm';
 
 function isTableMissingError(error: any): boolean {
   const msg = error?.message || error?.toString() || '';
   const code = error?.code || '';
-  // postgres-js: code 42P01 = undefined_table
   return code === '42P01' || msg.includes('does not exist') || msg.includes('undefined_table');
 }
 
@@ -53,10 +52,9 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Get or create visitor ID from cookie
     let visitorId = req.cookies.get('visitor_id')?.value;
     if (!visitorId) {
-      visitorId = `v-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      visitorId = `v-${generateId()}`;
     }
 
     // Check if already liked
@@ -73,10 +71,10 @@ export async function POST(
     }
 
     await db.insert(schema.postLikes).values({
-      id: `like-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: generateId(),
       postId: id,
       visitorId,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(),
     });
 
     // Get new count
@@ -86,11 +84,10 @@ export async function POST(
       .where(eq(schema.postLikes.postId, id));
 
     const response = NextResponse.json({ count: result?.count ?? 1, liked: true });
-    // Set visitor cookie if new
     if (!req.cookies.get('visitor_id')?.value) {
       response.cookies.set('visitor_id', visitorId, {
         path: '/',
-        maxAge: 60 * 60 * 24 * 365, // 1 year
+        maxAge: 60 * 60 * 24 * 365,
         sameSite: 'strict',
       });
     }

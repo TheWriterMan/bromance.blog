@@ -1,3 +1,18 @@
 export { db, sql } from './client';
 export * from './schema';
-export type { Category, Tag, Post, PostTag, MediaItem, PostRevision, Schema } from './types';
+export { generateId } from './ids';
+export type {
+  Category,
+  Tag,
+  Post,
+  PostTag,
+  MediaItem,
+  PostRevision,
+  Redirect,
+  Author,
+  PostLike,
+  Comment,
+  Setting,
+  Backup,
+  Schema,
+} from './types';

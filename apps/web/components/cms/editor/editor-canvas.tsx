@@ -369,9 +369,25 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
         ]);
 
         if (!active) return;
-        setCategories(catsData);
+        setCategories(catsData.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          description: c.description,
+          parentId: c.parent_id || null,
+          deletedAt: null,
+        })));
         setTags(tagsData);
-        setMediaItems(mediaData);
+        setMediaItems(mediaData.map((m: any) => ({
+          id: m.id,
+          cloudinaryId: m.cloudinary_id,
+          filename: m.filename,
+          width: m.width,
+          height: m.height,
+          format: m.format,
+          bytes: m.bytes,
+          createdAt: new Date(m.created_at),
+        })));
 
         if (postRes.ok) {
           const post = await postRes.json();
@@ -393,7 +409,15 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
         }
 
         if (revsRes.ok) {
-          setRevisions(await revsRes.json());
+          const revsData = await revsRes.json();
+          setRevisions(revsData.map((r: any) => ({
+            id: r.id,
+            postId: r.post_id,
+            title: r.title,
+            content: r.content,
+            updatedBy: r.updated_by,
+            createdAt: new Date(r.created_at),
+          })));
         }
       } catch (err) {
         console.error('Editor init error:', err);

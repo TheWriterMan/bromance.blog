@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
+    "nanoid": "^5.1.11",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
