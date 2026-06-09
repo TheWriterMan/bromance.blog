@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const VALID_USERNAME = 'R.Amisha';
-const VALID_PASSWORD = 'mouse12345';
+const VALID_USERNAME = process.env.CMS_USERNAME || '';
+const VALID_PASSWORD = process.env.CMS_PASSWORD || '';
 
 export async function GET(req: NextRequest) {
   const cookieHeader = req.headers.get('cookie') || '';

@@ -5,19 +5,24 @@
  * Run with: npx tsx scripts/migrate-medium-to-cloudinary.ts
  * Dry run:  DRY_RUN=1 npx tsx scripts/migrate-medium-to-cloudinary.ts
  *
- * All credentials are hardcoded — no .env needed.
+ * All credentials come from environment variables.
  */
 
 import { v2 as cloudinary } from 'cloudinary';
 import postgres from 'postgres';
 import crypto from 'crypto';
 
-// --- HARDCODED CREDENTIALS ---
-const CLOUD_NAME = 'dtperak4e';
-const API_KEY = '436427533766122';
-const API_SECRET = 'CCf-JYwGF-SGn4P6jnvfXoOC-CE';
-const FOLDER = 'bromance-blog';
-const DATABASE_URL = 'postgres://postgres.whlhkshlhantpsbqohaz:FalnVKSVAkCUtw2s@aws-1-ap-south-1.pooler.supabase.com:6543/postgres';
+// --- CREDENTIALS (from environment variables) ---
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
+const API_KEY = process.env.CLOUDINARY_API_KEY || '';
+const API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
+const FOLDER = process.env.CLOUDINARY_FOLDER || 'bromance-blog';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+if (!CLOUD_NAME || !API_KEY || !API_SECRET || !DATABASE_URL) {
+  console.error('Missing required env vars: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, DATABASE_URL');
+  process.exit(1);
+}
 
 cloudinary.config({
   cloud_name: CLOUD_NAME,
@@ -27,8 +32,7 @@ cloudinary.config({
 
 const DRY_RUN = process.env.DRY_RUN === '1';
 
-// Need the actual DB password — script will check connection on start
-const dbUrl = process.env.DATABASE_URL || DATABASE_URL;
+const dbUrl = DATABASE_URL;
 const sql = postgres(dbUrl, { prepare: false, max: 1, ssl: 'require' });
 
 // In-memory dedup map: source URL → result

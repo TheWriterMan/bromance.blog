@@ -3,8 +3,12 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { inArray } from 'drizzle-orm';
 import cloudinary from '@/lib/cloudinary';
+import { requireAuth } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   try {
     const { ids } = await req.json();
 

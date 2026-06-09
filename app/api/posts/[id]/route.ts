@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq, or, and, sql } from 'drizzle-orm';
+import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +89,9 @@ export async function PUT(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   const params = await props.params;
   try {
     const id = params.id;
@@ -283,6 +287,9 @@ export async function DELETE(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   const params = await props.params;
   try {
     const id = params.id;

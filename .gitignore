@@ -7,3 +7,4 @@ coverage/
 !.env.example
 credentials.md
 package-lock.json
+.kiro/steering/git-identity.md

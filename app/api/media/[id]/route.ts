@@ -3,11 +3,15 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import cloudinary from '@/lib/cloudinary';
+import { requireAuth } from '@/lib/auth';
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   try {
     const { id } = await params;
 
