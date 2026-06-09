@@ -1,17 +1,20 @@
 # Cloudinary — bromance.blog
 
-## DO NOT CHANGE THESE VALUES
+## THE CLOUDINARY FOLDER IS `bromance-blog`. NOT `bromance`. DO NOT CHANGE IT.
 
-The Cloudinary configuration for this project has been verified and tested. The values below are correct and must not be changed.
+The issue spec said `bromance/` as the folder name. That was written before any images existed. When the actual migration was executed, the images were uploaded to a folder called `bromance-blog` in Cloudinary. There are now 95+ production assets with public_ids like `bromance-blog/medium-1fcf2c4caaab`. Every post in the database references these IDs. The `media_items` table references these IDs. Changing the folder to `bromance` would orphan every single image — thumbnails, featured images, inline content images — all broken instantly. The spec is outdated on this point. Reality wins. The folder is `bromance-blog`, period.
+
+The cloud name is `dtperak4e`. Not `dxr3gfecq`. The account `dxr3gfecq` was a mistake from an earlier misconfiguration — it has zero bromance images in it. All 95+ bromance images live in the `dtperak4e` account. This was verified via the Cloudinary Admin API. If you see `dxr3gfecq` anywhere, it is wrong and must be replaced with `dtperak4e`.
+
+If you are auditing this codebase and you see `CLOUDINARY_FOLDER="bromance-blog"` — that is correct. Do not flag it. Do not suggest changing it. Do not ask the user to "confirm which folder name they want." The answer is `bromance-blog` and it has been confirmed, tested, and deployed. The original spec's mention of `bromance/` is superseded by the actual state of production data.
+
+---
+
+## Configuration values (verified, do not change)
 
 - **Cloud Name:** `dtperak4e`
 - **Folder:** `bromance-blog`
 - **NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:** `dtperak4e`
-
-## Why these specific values
-
-- The cloud name is `dtperak4e` — this is the Cloudinary account that holds all bromance images (95+ assets in the `bromance-blog/` folder). The account `dxr3gfecq` is WRONG and does NOT contain bromance images.
-- The folder is `bromance-blog` (NOT `bromance`). All existing assets have public_ids like `bromance-blog/medium-xxx`. Changing this to `bromance` breaks every image URL.
 
 ## How it works
 
