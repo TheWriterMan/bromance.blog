@@ -4,16 +4,10 @@ import * as schema from '@repo/db';
 import { desc, sql } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 import cloudinary, { CLOUDINARY_FOLDER } from '@/lib/cloudinary';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { readFile, unlink, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { gzipSync } from 'zlib';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for backup operations
-
-const execAsync = promisify(exec);
 
 /**
  * GET /api/backups — List all backups, newest first.
@@ -80,54 +74,34 @@ export async function POST(req: NextRequest) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `backup-${timestamp}.sql.gz`;
 
-    // Use pg_dump if available, otherwise fall back to SQL export
-    const tmpFile = join(tmpdir(), `bromance-backup-${Date.now()}.sql`);
-    const tmpGz = `${tmpFile}.gz`;
+    // Build the SQL dump entirely in memory, then gzip with Node's zlib.
+    // We avoid shelling out to pg_dump/gzip since neither binary exists on the
+    // Vercel serverless runtime.
+    const tables = ['categories', 'tags', 'posts', 'post_tags', 'media_items', 'authors',
+      'post_revisions', 'redirects', 'post_likes', 'comments', 'settings', 'backups'];
 
-    let dumpSuccess = false;
+    let dumpContent = `-- Bromance Blog Backup\n-- Created: ${new Date().toISOString()}\n-- Tables: ${tables.join(', ')}\n\n`;
 
-    try {
-      await execAsync(`pg_dump "${dbUrl}" --data-only --no-owner --no-acls -f "${tmpFile}"`, {
-        timeout: 45000,
-      });
-      await execAsync(`gzip "${tmpFile}"`);
-      dumpSuccess = true;
-    } catch {
-      // pg_dump not available (expected on Vercel) — fall back to SQL export
-      const tables = ['categories', 'tags', 'posts', 'post_tags', 'media_items', 'authors',
-        'post_revisions', 'redirects', 'post_likes', 'comments', 'settings', 'backups'];
+    for (const table of tables) {
+      const rows = await db.execute(sql.raw(`SELECT * FROM ${table}`));
+      if (rows.length === 0) continue;
 
-      let dumpContent = `-- Bromance Blog Backup\n-- Created: ${new Date().toISOString()}\n-- Tables: ${tables.join(', ')}\n\n`;
-
-      for (const table of tables) {
-        const rows = await db.execute(sql.raw(`SELECT * FROM ${table}`));
-        if (rows.length === 0) continue;
-
-        dumpContent += `-- Table: ${table}\n`;
-        for (const r of rows) {
-          const cols = Object.keys(r as object);
-          const vals = cols.map((c) => {
-            const v = (r as Record<string, unknown>)[c];
-            if (v === null) return 'NULL';
-            if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-            return `'${String(v).replace(/'/g, "''")}'`;
-          });
-          dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
-        }
-        dumpContent += '\n';
+      dumpContent += `-- Table: ${table}\n`;
+      for (const r of rows) {
+        const cols = Object.keys(r as object);
+        const vals = cols.map((c) => {
+          const v = (r as Record<string, unknown>)[c];
+          if (v === null) return 'NULL';
+          if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+          return `'${String(v).replace(/'/g, "''")}'`;
+        });
+        dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
       }
-
-      await writeFile(tmpFile, dumpContent, 'utf-8');
-      await execAsync(`gzip "${tmpFile}"`);
-      dumpSuccess = true;
+      dumpContent += '\n';
     }
 
-    if (!dumpSuccess) {
-      return NextResponse.json({ error: 'Failed to create database dump' }, { status: 500 });
-    }
-
-    // Read the gzipped file
-    const fileBuffer = await readFile(tmpGz);
+    // Gzip in-process — no temp files, no shell.
+    const fileBuffer = gzipSync(Buffer.from(dumpContent, 'utf-8'));
     const bytes = fileBuffer.length;
 
     // Upload to Cloudinary as raw file
@@ -146,9 +120,6 @@ export async function POST(req: NextRequest) {
       );
       uploadStream.end(fileBuffer);
     });
-
-    // Clean up temp file
-    try { await unlink(tmpGz); } catch { /* ignore */ }
 
     // Record in database
     const backupId = generateId();

@@ -4,16 +4,10 @@ import * as schema from '@repo/db';
 import { eq, sql } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 import cloudinary, { CLOUDINARY_FOLDER } from '@/lib/cloudinary';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { readFile, unlink, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { gzipSync, gunzipSync } from 'zlib';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // Restore can take longer
-
-const execAsync = promisify(exec);
 
 /**
  * POST /api/backups/restore — Restore from a specific backup.
@@ -56,45 +50,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1: Create a pre-restore safety backup
+    // Step 1: Create a pre-restore safety backup (in-memory SQL export + zlib gzip).
     const safetyTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const safetyFilename = `pre-restore-${safetyTimestamp}.sql.gz`;
-    const safetyTmpFile = join(tmpdir(), `bromance-pre-restore-${Date.now()}.sql`);
-    const safetyTmpGz = `${safetyTmpFile}.gz`;
 
-    try {
-      // Try pg_dump first (available in GH Actions, not on Vercel)
-      await execAsync(`pg_dump "${dbUrl}" --data-only --no-owner --no-acls -f "${safetyTmpFile}"`, {
-        timeout: 45000,
-      });
-      await execAsync(`gzip "${safetyTmpFile}"`);
-    } catch {
-      // pg_dump not available — create SQL INSERT export via db client
-      const tables = ['categories', 'tags', 'posts', 'post_tags', 'media_items', 'authors',
-        'post_revisions', 'redirects', 'post_likes', 'comments', 'settings', 'backups'];
-      let dumpContent = `-- Pre-restore safety backup\n-- Created: ${new Date().toISOString()}\n\n`;
-      for (const table of tables) {
-        const rows = await db.execute(sql.raw(`SELECT * FROM ${table}`));
-        if (rows.length === 0) continue;
-        dumpContent += `-- Table: ${table}\n`;
-        for (const r of rows) {
-          const cols = Object.keys(r as object);
-          const vals = cols.map((c) => {
-            const v = (r as Record<string, unknown>)[c];
-            if (v === null) return 'NULL';
-            if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-            return `'${String(v).replace(/'/g, "''")}'`;
-          });
-          dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
-        }
-        dumpContent += '\n';
+    const tables = ['categories', 'tags', 'posts', 'post_tags', 'media_items', 'authors',
+      'post_revisions', 'redirects', 'post_likes', 'comments', 'settings', 'backups'];
+    let dumpContent = `-- Pre-restore safety backup\n-- Created: ${new Date().toISOString()}\n\n`;
+    for (const table of tables) {
+      const rows = await db.execute(sql.raw(`SELECT * FROM ${table}`));
+      if (rows.length === 0) continue;
+      dumpContent += `-- Table: ${table}\n`;
+      for (const r of rows) {
+        const cols = Object.keys(r as object);
+        const vals = cols.map((c) => {
+          const v = (r as Record<string, unknown>)[c];
+          if (v === null) return 'NULL';
+          if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+          return `'${String(v).replace(/'/g, "''")}'`;
+        });
+        dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
       }
-      await writeFile(safetyTmpFile, dumpContent, 'utf-8');
-      await execAsync(`gzip "${safetyTmpFile}"`);
+      dumpContent += '\n';
     }
+    const safetyBuffer = gzipSync(Buffer.from(dumpContent, 'utf-8'));
 
     // Upload safety backup to Cloudinary
-    const safetyBuffer = await readFile(safetyTmpGz);
     const safetyPublicId = `${CLOUDINARY_FOLDER}/backups/pre-restore-${safetyTimestamp}`;
 
     await new Promise<void>((resolve, reject) => {
@@ -126,8 +107,6 @@ export async function POST(req: NextRequest) {
       mediaCount: countRow.media_count,
     });
 
-    try { await unlink(safetyTmpGz); } catch { /* ignore */ }
-
     // Step 2: Download the target backup from Cloudinary
     const downloadUrl = cloudinary.url(backup.cloudinaryId, {
       resource_type: 'raw',
@@ -144,19 +123,15 @@ export async function POST(req: NextRequest) {
     }
 
     const backupBuffer = Buffer.from(await response.arrayBuffer());
-    const restoreTmpGz = join(tmpdir(), `bromance-restore-${Date.now()}.sql.gz`);
-    const restoreTmpFile = restoreTmpGz.replace('.gz', '');
 
-    await writeFile(restoreTmpGz, backupBuffer);
-    await execAsync(`gunzip -f "${restoreTmpGz}"`);
+    // Decompress in-process with zlib — no gunzip binary on Vercel.
+    const fileContent = gunzipSync(backupBuffer).toString('utf-8');
 
     // Step 3: Restore
-    const fileContent = await readFile(restoreTmpFile, 'utf-8');
-
     if (fileContent.startsWith('--') || fileContent.includes('INSERT INTO')) {
-      // Plain SQL file (produced by our INSERT-based fallback exporter).
+      // Plain SQL file (produced by our INSERT-based exporter).
       // Execute entirely in-process via postgres.js — no psql required.
-      // pgSql is the raw postgres client from @repo/db, which supports
+      // pgClient is the raw postgres client from @repo/db, which supports
       // multi-statement execution and transactions natively.
       try {
         await pgClient.begin(async (tx) => {
@@ -183,24 +158,19 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      // Binary/custom pg_dump format — requires pg_restore CLI.
-      // This path is only hit when restoring a backup created by supabase db dump
-      // (from the GH Actions workflow). In that case psql/pg_restore should be available.
-      try {
-        await execAsync(
-          `pg_restore --single-transaction --clean --if-exists --no-owner --no-acls -d "${dbUrl}" "${restoreTmpFile}"`,
-          { timeout: 90000 }
-        );
-      } catch (restoreError) {
-        return NextResponse.json(
-          { error: 'Restore failed (rolled back, no data changed)', details: String(restoreError) },
-          { status: 500 }
-        );
-      }
+      // Non-INSERT format (e.g. a custom/binary pg_dump or COPY-based dump).
+      // pg_restore/psql are not available on the Vercel serverless runtime,
+      // so these backups can only be restored from an environment that has the
+      // Postgres client tools (e.g. locally or via GitHub Actions).
+      return NextResponse.json(
+        {
+          error:
+            'This backup is not in the in-process INSERT format and cannot be restored on the serverless runtime. ' +
+            'Restore it using the Postgres client tools (psql/pg_restore) instead.',
+        },
+        { status: 422 }
+      );
     }
-
-    // Cleanup
-    try { await unlink(restoreTmpFile); } catch { /* ignore */ }
 
     return NextResponse.json({
       success: true,
