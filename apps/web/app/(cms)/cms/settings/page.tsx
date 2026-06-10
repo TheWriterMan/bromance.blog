@@ -156,7 +156,7 @@ export default function SiteSettingsPage() {
                 </div>
               </SettingRow>
               <SettingRow label="Timezone" description="Used for scheduling and timestamps.">
-                <Select value={settings.timezone || 'Asia/Kolkata'} onValueChange={v => set('timezone', v)}>
+                <Select value={settings.timezone || 'Asia/Kolkata'} onValueChange={v => set('timezone', v ?? 'Asia/Kolkata')}>
                   <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent className="max-h-48">
                     {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
