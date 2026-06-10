@@ -171,8 +171,23 @@ export async function GET(req: NextRequest) {
         .map(pt => pt.tag_id);
       const postTagsArray = tags.filter(t => taggedIds.includes(t.id));
 
-      // Compute read time from content word count
-      const wordCount = post.content ? post.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length : 0;
+      // Compute read time from content word count (handles both JSON and HTML)
+      let wordCount = 0;
+      if (post.content) {
+        try {
+          const doc = JSON.parse(post.content);
+          // TipTap JSON: extract text from all text nodes recursively
+          const extractText = (node: any): string => {
+            if (node.text) return node.text;
+            if (node.content) return node.content.map(extractText).join(' ');
+            return '';
+          };
+          wordCount = extractText(doc).split(/\s+/).filter(Boolean).length;
+        } catch {
+          // Fallback: treat as HTML
+          wordCount = post.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length;
+        }
+      }
       const readTime = Math.max(1, Math.ceil(wordCount / 200));
 
       return {

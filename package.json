@@ -11,6 +11,9 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
+    "@types/marked": "^6.0.0",
+    "marked": "^18.0.5",
+    "tsx": "^4.22.4",
     "turbo": "latest",
     "typescript": "5.9.3"
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Extension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
@@ -156,6 +157,7 @@ interface EditorCanvasProps {
 }
 
 export default function EditorCanvas({ postId }: EditorCanvasProps) {
+  const router = useRouter();
   // Data
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -326,7 +328,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     ],
     content: '',
     onUpdate: ({ editor }) => {
-      setContent(editor.getHTML());
+      setContent(JSON.stringify(editor.getJSON()));
     },
     editorProps: {
       attributes: {
@@ -356,6 +358,20 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     let active = true;
     async function init() {
       try {
+        // If creating a new post, POST first then redirect
+        if (postId === 'new') {
+          const createRes = await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Untitled Post', status: 'draft' }),
+          });
+          if (createRes.ok) {
+            const newPost = await createRes.json();
+            router.replace(`/cms/posts/${newPost.id}`);
+          }
+          return;
+        }
+
         const [catsRes, tagsRes, mediaRes, postRes, revsRes] = await Promise.all([
           fetch('/api/categories'),
           fetch('/api/tags'),
@@ -394,6 +410,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           setTitle(post.title || '');
           setSlug(post.slug || '');
           setSummary(post.summary || '');
+          // Store raw content string — will be parsed as JSON in the setContent effect
           setContent(post.content || '');
           setStatus(post.status || 'draft');
           setPublishedAt(post.published_at ? new Date(post.published_at).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10));
@@ -430,14 +447,20 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   }, [postId]);
 
   // Set editor content once loaded
+  const contentLoadedRef = useRef(false);
   useEffect(() => {
-    if (tipTapEditor && !loading && content) {
-      if (tipTapEditor.getHTML() !== content) {
+    if (tipTapEditor && !loading && content && !contentLoadedRef.current) {
+      contentLoadedRef.current = true;
+      try {
+        const parsed = JSON.parse(content);
+        tipTapEditor.commands.setContent(parsed, { emitUpdate: false });
+      } catch {
+        // Fallback: if content is HTML (legacy), load it directly
         tipTapEditor.commands.setContent(content, { emitUpdate: false });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, tipTapEditor]);
+  }, [loading, tipTapEditor, content]);
 
   // Set title in contenteditable div
   useEffect(() => {
@@ -603,7 +626,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Editor area */}
         <div className="flex-1 overflow-y-auto relative">
-          <div className="max-w-2xl mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-12 relative">
+          <div className="w-[80%] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-12 relative">
             {/* Floating insert button */}
             {tipTapEditor && <FloatingInsert editor={tipTapEditor} />}
 

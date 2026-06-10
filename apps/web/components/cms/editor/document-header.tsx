@@ -254,17 +254,7 @@ export default function DocumentHeader({
           </div>
         </div>
 
-        {/* Slug */}
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider shrink-0">Slug</span>
-          <input
-            type="text"
-            value={slug}
-            onChange={(e) => onSlugChange(e.target.value)}
-            placeholder="auto-generated"
-            className="flex-1 min-w-0 px-2 py-1 text-sm font-mono text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 min-h-[32px]"
-          />
-        </div>
+        {/* Slug — moved to settings panel */}
       </div>
     </div>
   );
