@@ -16,6 +16,7 @@ const SECTION_LABELS: Record<string, string> = {
   '/cms/tags': 'Tags',
   '/cms/authors': 'Author',
   '/cms/settings': 'Settings',
+  '/cms/settings/backups': 'Backups',
 };
 
 export default function CmsShell({ children }: { children: React.ReactNode }) {

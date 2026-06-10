@@ -1,0 +1,103 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          FILENAME="backup-${TIMESTAMP}.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only -f "$FILENAME"
+          gzip "$FILENAME"
+          echo "BACKUP_FILE=${FILENAME}.gz" >> $GITHUB_ENV
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "BACKUP_SIZE=$(stat --printf='%s' ${FILENAME}.gz)" >> $GITHUB_ENV
+
+      - name: Upload to Cloudinary
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload" \
+            -F "file=@${BACKUP_FILE}" \
+            -F "public_id=bromance-blog/backups/backup-${TIMESTAMP}" \
+            -F "resource_type=raw" \
+            -u "${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "$BODY"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Cloudinary upload failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          CLOUDINARY_ID=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['public_id'])")
+          echo "CLOUDINARY_ID=${CLOUDINARY_ID}" >> $GITHUB_ENV
+
+      - name: Record backup metadata
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Get table counts via direct SQL
+          COUNTS=$(psql "$DATABASE_URL" -t -A -F'|' -c "
+            SELECT
+              (SELECT count(*) FROM posts WHERE deleted_at IS NULL),
+              (SELECT count(*) FROM categories WHERE deleted_at IS NULL),
+              (SELECT count(*) FROM tags),
+              (SELECT count(*) FROM media_items);
+          ")
+          POST_COUNT=$(echo "$COUNTS" | cut -d'|' -f1)
+          CATEGORY_COUNT=$(echo "$COUNTS" | cut -d'|' -f2)
+          TAG_COUNT=$(echo "$COUNTS" | cut -d'|' -f3)
+          MEDIA_COUNT=$(echo "$COUNTS" | cut -d'|' -f4)
+
+          # Generate a short ID
+          BACKUP_ID=$(cat /dev/urandom | tr -dc 'a-z0-9' | head -c 12)
+
+          psql "$DATABASE_URL" -c "
+            INSERT INTO backups (id, cloudinary_id, filename, bytes, post_count, category_count, tag_count, media_count)
+            VALUES ('${BACKUP_ID}', '${CLOUDINARY_ID}', '${BACKUP_FILE}', ${BACKUP_SIZE}, ${POST_COUNT}, ${CATEGORY_COUNT}, ${TAG_COUNT}, ${MEDIA_COUNT});
+          "
+
+      - name: Cleanup old backups (30+ days)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          # Get backups older than 30 days
+          OLD_BACKUPS=$(psql "$DATABASE_URL" -t -A -F'|' -c "
+            SELECT id, cloudinary_id FROM backups
+            WHERE created_at < NOW() - INTERVAL '30 days';
+          ")
+
+          if [ -z "$OLD_BACKUPS" ]; then
+            echo "No old backups to clean up."
+            exit 0
+          fi
+
+          echo "$OLD_BACKUPS" | while IFS='|' read -r ID CLOUD_ID; do
+            echo "Deleting backup: $ID ($CLOUD_ID)"
+            # Delete from Cloudinary via Admin API (raw resource)
+            curl -s -X DELETE \
+              "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/raw/upload?public_ids[]=${CLOUD_ID}" \
+              -u "${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}"
+            # Delete from database
+            psql "$DATABASE_URL" -c "DELETE FROM backups WHERE id = '${ID}';"
+          done
