@@ -169,6 +169,22 @@ export default function SiteSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Support & Contact */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Support &amp; Contact</CardTitle>
+              <CardDescription className="text-xs">Links shown across the public blog footer, header, and post pages.</CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y divide-border p-0 px-4">
+              <SettingRow label="Ko-fi Link" description="Support button shown in the header, footer, and articles.">
+                <Input value={settings.kofi_link || ''} onChange={e => set('kofi_link', e.target.value)} placeholder="https://ko-fi.com/yourname" className="h-11" />
+              </SettingRow>
+              <SettingRow label="Contact Email" description="Shown in the public footer contact section.">
+                <Input type="email" value={settings.contact_email || ''} onChange={e => set('contact_email', e.target.value)} placeholder="hello@bromance.blog" className="h-11" />
+              </SettingRow>
+            </CardContent>
+          </Card>
+
           {/* Maintenance */}
           <Card className="border-amber-200 dark:border-amber-800/60">
             <CardHeader>
