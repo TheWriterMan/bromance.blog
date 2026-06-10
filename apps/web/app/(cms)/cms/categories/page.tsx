@@ -73,7 +73,7 @@ function CategoryForm({ categories, initial, onSave, onCancel }: CategoryFormPro
       </div>
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground">Parent Category</label>
-        <Select value={parentId} onValueChange={setParentId}>
+        <Select value={parentId} onValueChange={(v) => setParentId(v ?? '__none__')}>
           <SelectTrigger className="h-11"><SelectValue placeholder="None (top-level)" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">None (top-level)</SelectItem>
