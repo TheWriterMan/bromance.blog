@@ -18,7 +18,7 @@ export default function CmsPage() {
         const res = await fetch('/api/auth');
         const data = await res.json();
         if (data.authenticated) {
-          router.replace('/cms/posts');
+          router.replace('/cms/dashboard');
           return;
         }
       } catch {}
@@ -44,7 +44,7 @@ export default function CmsPage() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      router.push('/cms/posts');
+      router.push('/cms/dashboard');
       router.refresh();
     } catch (err: any) {
       setError(err.message || 'Something went wrong');

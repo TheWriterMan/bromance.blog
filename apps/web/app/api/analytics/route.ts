@@ -18,6 +18,15 @@ export async function GET() {
     const publishedCount = posts.filter(p => p.status === 'published').length;
     const draftsCount = posts.filter(p => p.status === 'draft').length;
     const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
+    const totalCategories = categories.length;
+    const totalTags = tags.length;
+
+    // Compute average read time
+    const totalWords = posts.reduce((acc, p) => {
+      const wordCount = p.content ? p.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length : 0;
+      return acc + wordCount;
+    }, 0);
+    const avgReadTime = posts.length > 0 ? Math.round((totalWords / posts.length / 200) * 10) / 10 : 0;
 
     // Popular posts sorted by views
     const popularPosts = [...posts]
@@ -69,6 +78,9 @@ export async function GET() {
       publishedCount,
       draftsCount,
       scheduledCount,
+      totalCategories,
+      totalTags,
+      avgReadTime,
       popularPosts,
       categoryDistribution,
       tagDistribution,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, isNull, sql } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -14,12 +14,25 @@ export async function GET(req: NextRequest) {
     const conditions = includeDeleted ? undefined : isNull(schema.categories.deletedAt);
     const list = await db.select().from(schema.categories).where(conditions);
 
+    // Compute post counts per category (only non-deleted posts)
+    const postCounts = await db
+      .select({
+        categoryId: schema.posts.categoryId,
+        count: sql<number>`cast(count(*) as integer)`,
+      })
+      .from(schema.posts)
+      .where(isNull(schema.posts.deletedAt))
+      .groupBy(schema.posts.categoryId);
+
+    const countMap = new Map(postCounts.map(pc => [pc.categoryId, pc.count]));
+
     return NextResponse.json(list.map(c => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
       description: c.description,
       parent_id: c.parentId,
+      post_count: countMap.get(c.id) ?? 0,
     })));
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });

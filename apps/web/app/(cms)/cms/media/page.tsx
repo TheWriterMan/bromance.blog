@@ -1,422 +1,330 @@
-'use client';
+'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import CmsShell from '@/components/cms/layout/cms-shell';
-import { getCloudinaryUrl } from '@/lib/utils';
-import { Search, Upload, X, Copy, Trash2, Image, CheckSquare, Square, Minus } from 'lucide-react';
-import ConfirmDialog from '@/components/cms/shared/confirm-dialog';
+import { useState, useEffect, useRef } from 'react'
+import { Upload, Search, Trash2, Copy, CheckCheck, ImageIcon, LayoutGrid, List } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
+import { PageHeader } from '@/components/cms/page-header'
+import { fetchMedia, uploadMedia, deleteMedia, bulkDeleteMedia, formatFileSize, getCloudinaryUrl } from '@/lib/cms-api'
+import type { MediaItem } from '@/lib/cms-api'
+import { cn } from '@/lib/utils'
 
-interface MediaItem {
-  id: string;
-  cloudinary_id: string;
-  filename: string;
-  width: number;
-  height: number;
-  format: string;
-  bytes: number;
-  created_at: string;
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function MediaPage() {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<MediaItem | null>(null);
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [reconciling, setReconciling] = useState(false);
-  const [reconcileResult, setReconcileResult] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const fetchMedia = useCallback(async () => {
-    try {
-      const res = await fetch('/api/media');
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch media:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [items, setItems] = useState<MediaItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [dragging, setDragging] = useState(false)
+  const [selected, setSelected] = useState<MediaItem | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [showBulkDelete, setShowBulkDelete] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetchMedia();
-  }, [fetchMedia]);
+    fetchMedia()
+      .then(setItems)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
 
-  const handleUpload = async (files: FileList | File[]) => {
-    setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
-        const formData = new FormData();
-        formData.append('file', file);
-        await fetch('/api/media/upload', { method: 'POST', body: formData });
-      }
-      await fetchMedia();
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files.length > 0) {
-      handleUpload(e.dataTransfer.files);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await fetch(`/api/media/${deleteTarget.id}`, { method: 'DELETE' });
-      setItems(prev => prev.filter(i => i.id !== deleteTarget.id));
-      if (selectedItem?.id === deleteTarget.id) setSelectedItem(null);
-      selectedIds.delete(deleteTarget.id);
-      setSelectedIds(new Set(selectedIds));
-    } catch (error) {
-      console.error('Delete failed:', error);
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    try {
-      const res = await fetch('/api/media/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
-      });
-      if (res.ok) {
-        setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
-        if (selectedItem && selectedIds.has(selectedItem.id)) setSelectedItem(null);
-        setSelectedIds(new Set());
-        setSelectionMode(false);
-      }
-    } catch (error) {
-      console.error('Bulk delete failed:', error);
-    } finally {
-      setBulkDeleteConfirm(false);
-    }
-  };
-
-  const toggleSelection = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedIds(next);
-  };
-
-  const selectAll = () => {
-    if (selectedIds.size === filteredItems.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredItems.map(i => i.id)));
-    }
-  };
-
-  const exitSelectionMode = () => {
-    setSelectionMode(false);
-    setSelectedIds(new Set());
-  };
-
-  const handleReconcile = async () => {
-    setReconciling(true);
-    setReconcileResult(null);
-    try {
-      const res = await fetch('/api/media/reconcile', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        setReconcileResult(`Synced ${data.reconciled} image${data.reconciled !== 1 ? 's' : ''} from posts`);
-        if (data.reconciled > 0) await fetchMedia();
-      } else {
-        setReconcileResult(data.error || 'Sync failed');
-      }
-    } catch {
-      setReconcileResult('Sync failed');
-    } finally {
-      setReconciling(false);
-      setTimeout(() => setReconcileResult(null), 4000);
-    }
-  };
-
-  const copyUrl = (item: MediaItem) => {
-    const url = getCloudinaryUrl(item.cloudinary_id, 'content');
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const filteredItems = items.filter(item =>
+  const filtered = items.filter(item =>
     item.filename.toLowerCase().includes(search.toLowerCase())
-  );
+  )
 
-  const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
-  const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds)
+    await bulkDeleteMedia(ids)
+    setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
+    setSelectedIds(new Set())
+    setShowBulkDelete(false)
+  }
+
+  async function handleDelete(id: string) {
+    await deleteMedia(id)
+    setItems(prev => prev.filter(i => i.id !== id))
+    setDeleteTarget(null)
+    if (selected?.id === id) setSelected(null)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    handleFiles(Array.from(e.dataTransfer.files))
+  }
+
+  async function handleFiles(files: File[]) {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (!imageFiles.length) return
+
+    for (const file of imageFiles) {
+      try {
+        const item = await uploadMedia(file)
+        setItems(prev => [item, ...prev])
+      } catch (e) {
+        console.error('Upload failed:', e)
+      }
+    }
+  }
+
+  function handleCopyUrl(item: MediaItem) {
+    const fullUrl = getCloudinaryUrl(item.cloudinaryId, { width: 1200, quality: 'auto' })
+    navigator.clipboard.writeText(fullUrl).catch(() => {})
+    setCopiedId(item.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <PageHeader title="Media Library" />
+        <main className="flex-1 p-4 md:p-6">
+          <div className="animate-pulse grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[...Array(8)].map((_, i) => <div key={i} className="aspect-square bg-muted rounded-lg" />)}
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
-    <CmsShell>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900">Media Library</h1>
-          <div className="flex items-center gap-2">
-            {reconcileResult && (
-              <span className="text-xs text-zinc-500">{reconcileResult}</span>
-            )}
-            <button
-              onClick={handleReconcile}
-              disabled={reconciling}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
-            >
-              {reconciling ? 'Syncing…' : 'Sync from posts'}
-            </button>
-            {selectionMode ? (
-              <>
-                <button
-                  onClick={selectAll}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
-                >
-                  {allSelected ? <CheckSquare className="h-4 w-4" /> : someSelected ? <Minus className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                  {allSelected ? 'Deselect All' : 'Select All'}
-                </button>
-                {selectedIds.size > 0 && (
-                  <button
-                    onClick={() => setBulkDeleteConfirm(true)}
-                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete ({selectedIds.size})
-                  </button>
-                )}
-                <button
-                  onClick={exitSelectionMode}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setSelectionMode(true)}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-zinc-300 rounded-lg hover:bg-zinc-50 transition-colors"
-              >
-                <CheckSquare className="h-4 w-4" />
-                Select
-              </button>
-            )}
-          </div>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <PageHeader
+        title="Media Library"
+        description={`${items.length} files`}
+        actions={
+          <Button size="sm" className="min-h-[44px] gap-2" onClick={() => fileRef.current?.click()}>
+            <Upload className="size-4" /> Upload
+          </Button>
+        }
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        onChange={e => e.target.files && handleFiles(Array.from(e.target.files))}
+        aria-label="Upload files"
+      />
 
-        {/* Upload Zone */}
+      <main className="flex-1 p-4 md:p-6 space-y-4">
+        {/* Drop zone */}
         <div
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-lg p-8 mb-6 text-center cursor-pointer transition-colors ${
-            dragOver
-              ? 'border-zinc-900 bg-zinc-50'
-              : 'border-zinc-300 hover:border-zinc-400'
-          }`}
+          onClick={() => fileRef.current?.click()}
+          className={cn(
+            'flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all py-8 px-4',
+            dragging ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 hover:bg-muted/30'
+          )}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload media files"
+          onKeyDown={e => e.key === 'Enter' && fileRef.current?.click()}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => e.target.files && handleUpload(e.target.files)}
-          />
-          <Upload className="h-8 w-8 text-zinc-400 mx-auto mb-2" />
-          <p className="text-sm text-zinc-600">
-            {uploading ? 'Uploading...' : 'Drag & drop images here, or click to browse'}
-          </p>
-          <p className="text-xs text-zinc-400 mt-1">Accepts image files</p>
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search by filename..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent min-h-[44px]"
-          />
-        </div>
-
-        {/* Grid */}
-        {loading ? (
-          <div className="text-center py-12 text-zinc-500">Loading media...</div>
-        ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12">
-            <Image className="h-12 w-12 text-zinc-300 mx-auto mb-3" />
-            <p className="text-zinc-500 text-sm">No media items found</p>
+          <div className={cn('flex size-12 items-center justify-center rounded-full', dragging ? 'bg-accent/20' : 'bg-muted')}>
+            <Upload className={cn('size-6', dragging ? 'text-accent-foreground' : 'text-muted-foreground')} />
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {filteredItems.map((item) => (
-              <button
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">
+              {dragging ? 'Drop files here' : 'Drag & drop files, or click to browse'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Supports JPG, PNG, WebP, GIF</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input placeholder="Search files…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-11" aria-label="Search media" />
+          </div>
+          {selectedIds.size > 0 && (
+            <Button variant="destructive" className="h-11 gap-2" onClick={() => setShowBulkDelete(true)}>
+              <Trash2 className="size-4" /> Delete {selectedIds.size} files
+            </Button>
+          )}
+          <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'grid' | 'list')}>
+            <TabsList className="h-11">
+              <TabsTrigger value="grid" className="size-10 p-0" aria-label="Grid view"><LayoutGrid className="size-4" /></TabsTrigger>
+              <TabsTrigger value="list" className="size-10 p-0" aria-label="List view"><List className="size-4" /></TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+            <ImageIcon className="size-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No media files found</p>
+          </div>
+        )}
+
+        {/* Grid view */}
+        {viewMode === 'grid' && filtered.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {filtered.map(item => (
+              <div
                 key={item.id}
-                onClick={() => {
-                  if (selectionMode) {
-                    toggleSelection(item.id);
-                  } else {
-                    setSelectedItem(item);
-                  }
-                }}
-                className={`group relative aspect-square rounded-lg overflow-hidden border-2 transition-all min-h-[44px] ${
-                  selectedIds.has(item.id)
-                    ? 'border-blue-500 ring-2 ring-blue-500/20'
-                    : selectedItem?.id === item.id
-                    ? 'border-zinc-900 ring-2 ring-zinc-900/20'
-                    : 'border-zinc-200 hover:border-zinc-400'
-                }`}
-              >
-                <img
-                  src={getCloudinaryUrl(item.cloudinary_id, 'thumbnail')}
-                  alt={item.filename}
-                  className="w-full h-full object-cover"
-                />
-                {/* Selection checkbox overlay */}
-                {selectionMode && (
-                  <div className="absolute top-2 left-2 z-10">
-                    <div className={`h-5 w-5 rounded border-2 flex items-center justify-center ${
-                      selectedIds.has(item.id)
-                        ? 'bg-blue-500 border-blue-500 text-white'
-                        : 'bg-white/80 border-zinc-400'
-                    }`}>
-                      {selectedIds.has(item.id) && (
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
+                className={cn(
+                  'group relative rounded-lg overflow-hidden border cursor-pointer transition-all hover:shadow-md',
+                  selected?.id === item.id || selectedIds.has(item.id) ? 'ring-2 ring-accent border-accent' : 'border-border hover:border-accent/50'
                 )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-xs text-white truncate">{item.filename}</p>
+                onClick={() => setSelected(selected?.id === item.id ? null : item)}
+              >
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={selectedIds.has(item.id)}
+                    onCheckedChange={() => toggleSelect(item.id)}
+                    onClick={e => e.stopPropagation()}
+                    className={cn('bg-background/80 backdrop-blur-sm shadow-sm transition-opacity', selectedIds.has(item.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
+                  />
                 </div>
-              </button>
+                <div className="aspect-square bg-muted">
+                  <img src={item.url} alt={item.filename} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <div className="p-2">
+                  <p className="text-xs font-medium text-foreground truncate">{item.filename}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatFileSize(item.bytes)}</p>
+                </div>
+                {item.usedIn > 0 && (
+                  <Badge className="absolute top-1.5 right-1.5 text-[10px] h-4 px-1 bg-foreground/70 text-background">
+                    {item.usedIn}
+                  </Badge>
+                )}
+              </div>
             ))}
           </div>
         )}
 
-        {/* Detail Panel */}
-        {selectedItem && !selectionMode && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-lg border border-zinc-200 shadow-xl w-full max-w-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-zinc-900 truncate pr-4">
-                  {selectedItem.filename}
-                </h2>
-                <button
-                  onClick={() => setSelectedItem(null)}
-                  className="p-2 rounded-md hover:bg-zinc-100 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Close detail"
-                >
-                  <X className="h-5 w-5 text-zinc-500" />
-                </button>
-              </div>
-
-              <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-4">
-                <img
-                  src={getCloudinaryUrl(selectedItem.cloudinary_id, 'content')}
-                  alt={selectedItem.filename}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Dimensions</span>
-                  <span className="text-zinc-900">{selectedItem.width} x {selectedItem.height}</span>
+        {/* List view */}
+        {viewMode === 'list' && filtered.length > 0 && (
+          <div className="rounded-lg border border-border overflow-hidden bg-card divide-y divide-border">
+            {filtered.map(item => (
+              <div
+                key={item.id}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors group',
+                  selected?.id === item.id && 'bg-accent/10'
+                )}
+                onClick={() => setSelected(selected?.id === item.id ? null : item)}
+              >
+                <img src={item.url} alt={item.filename} className="size-10 rounded-md object-cover flex-shrink-0" loading="lazy" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{item.filename}</p>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(item.bytes)} · {item.width}×{item.height}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Format</span>
-                  <span className="text-zinc-900 uppercase">{selectedItem.format}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Size</span>
-                  <span className="text-zinc-900">{formatBytes(selectedItem.bytes)}</span>
+                <span className="text-xs text-muted-foreground hidden md:block">{formatDate(item.createdAt)}</span>
+                {item.usedIn > 0 && <Badge variant="secondary" className="text-xs hidden sm:flex">{item.usedIn} use{item.usedIn !== 1 ? 's' : ''}</Badge>}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="icon" variant="ghost" className="size-9" onClick={e => { e.stopPropagation(); handleCopyUrl(item) }} aria-label="Copy URL">
+                    {copiedId === item.id ? <CheckCheck className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" className="size-9 text-destructive hover:text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id) }} aria-label="Delete">
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => copyUrl(selectedItem)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors min-h-[44px]"
-                >
-                  <Copy className="h-4 w-4" />
-                  {copied ? 'Copied!' : 'Copy URL'}
-                </button>
-                <button
-                  onClick={() => setDeleteTarget(selectedItem)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors min-h-[44px]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         )}
+      </main>
 
-        {/* Single Delete Confirmation */}
-        <ConfirmDialog
-          open={!!deleteTarget}
-          title="Delete Media"
-          description={`Are you sure you want to delete "${deleteTarget?.filename}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          variant="danger"
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
+      {/* Detail sheet */}
+      <Sheet open={!!selected} onOpenChange={o => !o && setSelected(null)}>
+        <SheetContent className="w-[320px] sm:w-[380px] p-0 flex flex-col">
+          <SheetHeader className="px-4 py-4 border-b border-border">
+            <SheetTitle className="text-sm truncate pr-6">{selected?.filename}</SheetTitle>
+            <SheetDescription className="sr-only">File details</SheetDescription>
+          </SheetHeader>
+          {selected && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <img src={selected.url} alt={selected.filename} className="w-full rounded-lg object-cover max-h-48" />
+              <Separator />
+              <div className="space-y-3 text-sm">
+                {[
+                  { label: 'File name', value: selected.filename },
+                  { label: 'Size', value: formatFileSize(selected.bytes) },
+                  { label: 'Format', value: selected.format.toUpperCase() },
+                  { label: 'Dimensions', value: `${selected.width} × ${selected.height}` },
+                  { label: 'Uploaded', value: formatDate(selected.createdAt) },
+                  { label: 'Used in', value: `${selected.usedIn} post${selected.usedIn !== 1 ? 's' : ''}` },
+                ].map(row => (
+                  <div key={row.label} className="flex items-start justify-between gap-2">
+                    <span className="text-muted-foreground text-xs">{row.label}</span>
+                    <span className="text-xs font-medium text-right max-w-[160px] truncate">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <Button variant="outline" className="w-full min-h-[44px] gap-2" onClick={() => handleCopyUrl(selected)}>
+                {copiedId === selected.id ? <CheckCheck className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
+                Copy URL
+              </Button>
+              <Button variant="destructive" className="w-full min-h-[44px] gap-2" onClick={() => setDeleteTarget(selected.id)}>
+                <Trash2 className="size-4" /> Delete file
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
-        {/* Bulk Delete Confirmation */}
-        <ConfirmDialog
-          open={bulkDeleteConfirm}
-          title="Delete Selected Media"
-          description={`Are you sure you want to delete ${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.`}
-          confirmLabel={`Delete ${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''}`}
-          variant="danger"
-          onConfirm={handleBulkDelete}
-          onCancel={() => setBulkDeleteConfirm(false)}
-        />
-      </div>
-    </CmsShell>
-  );
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete file?</AlertDialogTitle>
+            <AlertDialogDescription>This file will be permanently deleted from Cloudinary.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && handleDelete(deleteTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} files?</AlertDialogTitle>
+            <AlertDialogDescription>These files will be permanently deleted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
 }

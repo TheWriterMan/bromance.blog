@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
       views: p.views,
     }));
 
-    // Enrich posts with category info & tag arrays
+    // Enrich posts with category info, tag arrays, and computed fields
     const enriched = posts.map(post => {
       const category = categories.find(c => c.id === post.category_id);
       const taggedIds = postTags
@@ -171,10 +171,15 @@ export async function GET(req: NextRequest) {
         .map(pt => pt.tag_id);
       const postTagsArray = tags.filter(t => taggedIds.includes(t.id));
 
+      // Compute read time from content word count
+      const wordCount = post.content ? post.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length : 0;
+      const readTime = Math.max(1, Math.ceil(wordCount / 200));
+
       return {
         ...post,
         category,
-        tags: postTagsArray
+        tags: postTagsArray,
+        read_time: readTime,
       };
     });
 

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { CmsSidebar } from '@/components/cms/cms-sidebar';
 
 export const metadata: Metadata = {
   title: 'CMS — Bromance',
@@ -14,8 +16,11 @@ export default function CmsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased">
-      {children}
-    </div>
+    <SidebarProvider>
+      <CmsSidebar />
+      <SidebarInset className="min-h-screen">
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
