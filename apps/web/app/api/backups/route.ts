@@ -10,6 +10,20 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60s for backup operations
 
 /**
+ * Serialize a JS value (as returned by the postgres client) into a SQL literal.
+ * jsonb/json columns come back as objects/arrays — String(obj) would produce
+ * "[object Object]", which is invalid JSON and breaks restore. Objects and
+ * arrays are JSON-stringified; Dates use ISO format.
+ */
+function serializeSqlValue(v: unknown): string {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (v instanceof Date) return `'${v.toISOString()}'`;
+  if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`;
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+/**
  * GET /api/backups — List all backups, newest first.
  */
 export async function GET(req: NextRequest) {
@@ -89,12 +103,7 @@ export async function POST(req: NextRequest) {
       dumpContent += `-- Table: ${table}\n`;
       for (const r of rows) {
         const cols = Object.keys(r as object);
-        const vals = cols.map((c) => {
-          const v = (r as Record<string, unknown>)[c];
-          if (v === null) return 'NULL';
-          if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-          return `'${String(v).replace(/'/g, "''")}'`;
-        });
+        const vals = cols.map((c) => serializeSqlValue((r as Record<string, unknown>)[c]));
         dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
       }
       dumpContent += '\n';

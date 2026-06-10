@@ -10,6 +10,86 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // Restore can take longer
 
 /**
+ * Serialize a JS value (as returned by the postgres client) into a SQL literal.
+ * Critically, jsonb/json columns come back as objects/arrays — String(obj)
+ * would produce "[object Object]", which is invalid JSON and breaks restore.
+ * Objects and arrays are JSON-stringified; Dates use ISO format.
+ */
+function serializeSqlValue(v: unknown): string {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (v instanceof Date) return `'${v.toISOString()}'`;
+  if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`;
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Split a plain-SQL dump into individual INSERT statements.
+ *
+ * A naive split on newlines or ";" is incorrect because string/JSON values can
+ * contain literal newlines and semicolons. This scanner walks the text
+ * character by character, tracking single-quoted string state (with '' as an
+ * escaped quote) and skipping SQL line comments (-- to end of line) when
+ * outside a string. Statements are split on top-level ";" and only those
+ * starting with INSERT INTO are returned, with the trailing semicolon stripped.
+ */
+function parseSqlInserts(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inString = false;
+  let i = 0;
+
+  while (i < sql.length) {
+    const ch = sql[i];
+
+    if (inString) {
+      current += ch;
+      if (ch === "'") {
+        if (sql[i + 1] === "'") {
+          // Escaped quote — keep both characters, stay in string.
+          current += "'";
+          i += 2;
+          continue;
+        }
+        inString = false;
+      }
+      i++;
+      continue;
+    }
+
+    // Outside a string literal.
+    if (ch === "'") {
+      inString = true;
+      current += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '-' && sql[i + 1] === '-') {
+      // Line comment — skip to end of line.
+      while (i < sql.length && sql[i] !== '\n') i++;
+      continue;
+    }
+
+    if (ch === ';') {
+      const trimmed = current.trim();
+      if (trimmed) statements.push(trimmed);
+      current = '';
+      i++;
+      continue;
+    }
+
+    current += ch;
+    i++;
+  }
+
+  const tail = current.trim();
+  if (tail) statements.push(tail);
+
+  return statements.filter((s) => s.toUpperCase().startsWith('INSERT INTO'));
+}
+
+/**
  * POST /api/backups/restore — Restore from a specific backup.
  * Body: { backup_id: string }
  *
@@ -63,12 +143,7 @@ export async function POST(req: NextRequest) {
       dumpContent += `-- Table: ${table}\n`;
       for (const r of rows) {
         const cols = Object.keys(r as object);
-        const vals = cols.map((c) => {
-          const v = (r as Record<string, unknown>)[c];
-          if (v === null) return 'NULL';
-          if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-          return `'${String(v).replace(/'/g, "''")}'`;
-        });
+        const vals = cols.map((c) => serializeSqlValue((r as Record<string, unknown>)[c]));
         dumpContent += `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT DO NOTHING;\n`;
       }
       dumpContent += '\n';
@@ -135,16 +210,18 @@ export async function POST(req: NextRequest) {
       // multi-statement execution and transactions natively.
       try {
         await pgClient.begin(async (tx) => {
-          // Clear all data tables in dependency order
+          // Clear all data tables, children before parents to satisfy FKs.
           await tx`TRUNCATE post_tags, post_likes, comments, post_revisions CASCADE`;
           await tx`TRUNCATE posts CASCADE`;
           await tx`TRUNCATE categories, tags, media_items, authors, redirects, settings CASCADE`;
 
-          // Split the dump into individual INSERT statements and execute each
-          const statements = fileContent
-            .split('\n')
-            .filter((line) => line.trim().startsWith('INSERT INTO'))
-            .map((line) => line.trim().replace(/;$/, ''));
+          // Parse the dump into individual INSERT statements. We can't split on
+          // newlines or on ";" naively because string/JSON values may contain
+          // either character. This scanner respects single-quoted string
+          // literals ('' escaping) and SQL line comments, so values are
+          // reconstructed correctly. Statements run in dump order, which lists
+          // parent tables before dependents to satisfy foreign keys.
+          const statements = parseSqlInserts(fileContent);
 
           for (const stmt of statements) {
             await tx.unsafe(stmt);
