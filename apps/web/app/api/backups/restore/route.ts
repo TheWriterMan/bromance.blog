@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, generateId } from '@repo/db';
+import { db, generateId, sql as pgClient } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, sql } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
@@ -22,7 +22,9 @@ const execAsync = promisify(exec);
  * Safety:
  * 1. Creates a pre-restore safety backup first
  * 2. Downloads the target backup from Cloudinary
- * 3. Restores using pg_restore --single-transaction (atomic)
+ * 3. For plain SQL (INSERT-based) backups: executes in-process via postgres client
+ *    inside a transaction — no psql required, works on Vercel.
+ * 4. For binary pg_dump format: falls back to pg_restore CLI.
  */
 export async function POST(req: NextRequest) {
   const denied = requireAuth(req);
@@ -61,13 +63,13 @@ export async function POST(req: NextRequest) {
     const safetyTmpGz = `${safetyTmpFile}.gz`;
 
     try {
-      // Try pg_dump first
+      // Try pg_dump first (available in GH Actions, not on Vercel)
       await execAsync(`pg_dump "${dbUrl}" --data-only --no-owner --no-acls -f "${safetyTmpFile}"`, {
         timeout: 45000,
       });
       await execAsync(`gzip "${safetyTmpFile}"`);
     } catch {
-      // If pg_dump not available, create SQL export
+      // pg_dump not available — create SQL INSERT export via db client
       const tables = ['categories', 'tags', 'posts', 'post_tags', 'media_items', 'authors',
         'post_revisions', 'redirects', 'post_likes', 'comments', 'settings', 'backups'];
       let dumpContent = `-- Pre-restore safety backup\n-- Created: ${new Date().toISOString()}\n\n`;
@@ -148,45 +150,42 @@ export async function POST(req: NextRequest) {
     await writeFile(restoreTmpGz, backupBuffer);
     await execAsync(`gunzip -f "${restoreTmpGz}"`);
 
-    // Step 3: Restore — check if it's a pg_dump custom format or plain SQL
+    // Step 3: Restore
     const fileContent = await readFile(restoreTmpFile, 'utf-8');
 
     if (fileContent.startsWith('--') || fileContent.includes('INSERT INTO')) {
-      // Plain SQL file — execute within a transaction
-      const restoreSql = `BEGIN;\n${fileContent}\nCOMMIT;\n`;
-      const txFile = join(tmpdir(), `bromance-restore-tx-${Date.now()}.sql`);
-      await writeFile(txFile, restoreSql, 'utf-8');
-
+      // Plain SQL file (produced by our INSERT-based fallback exporter).
+      // Execute entirely in-process via postgres.js — no psql required.
+      // pgSql is the raw postgres client from @repo/db, which supports
+      // multi-statement execution and transactions natively.
       try {
-        // Truncate all data tables first (inside the transaction)
-        const truncateSql = [
-          'BEGIN;',
-          'TRUNCATE post_tags, post_likes, comments, post_revisions CASCADE;',
-          'TRUNCATE posts CASCADE;',
-          'TRUNCATE categories, tags, media_items, authors, redirects, settings CASCADE;',
-          fileContent,
-          'COMMIT;',
-        ].join('\n');
+        await pgClient.begin(async (tx) => {
+          // Clear all data tables in dependency order
+          await tx`TRUNCATE post_tags, post_likes, comments, post_revisions CASCADE`;
+          await tx`TRUNCATE posts CASCADE`;
+          await tx`TRUNCATE categories, tags, media_items, authors, redirects, settings CASCADE`;
 
-        const finalFile = join(tmpdir(), `bromance-restore-final-${Date.now()}.sql`);
-        await writeFile(finalFile, truncateSql, 'utf-8');
+          // Split the dump into individual INSERT statements and execute each
+          const statements = fileContent
+            .split('\n')
+            .filter((line) => line.trim().startsWith('INSERT INTO'))
+            .map((line) => line.trim().replace(/;$/, ''));
 
-        await execAsync(`psql "${dbUrl}" -v ON_ERROR_STOP=1 -1 -f "${finalFile}"`, {
-          timeout: 90000,
+          for (const stmt of statements) {
+            await tx.unsafe(stmt);
+          }
         });
-
-        try { await unlink(finalFile); } catch { /* ignore */ }
       } catch (restoreError) {
-        // Transaction rolled back — nothing changed
+        // Transaction rolled back by postgres.js — nothing changed
         return NextResponse.json(
           { error: 'Restore failed (rolled back, no data changed)', details: String(restoreError) },
           { status: 500 }
         );
       }
-
-      try { await unlink(txFile); } catch { /* ignore */ }
     } else {
-      // Binary/custom format — use pg_restore
+      // Binary/custom pg_dump format — requires pg_restore CLI.
+      // This path is only hit when restoring a backup created by supabase db dump
+      // (from the GH Actions workflow). In that case psql/pg_restore should be available.
       try {
         await execAsync(
           `pg_restore --single-transaction --clean --if-exists --no-owner --no-acls -d "${dbUrl}" "${restoreTmpFile}"`,
