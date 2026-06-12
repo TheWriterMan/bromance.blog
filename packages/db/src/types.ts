@@ -36,6 +36,7 @@ export interface Post {
   discussionOpen: boolean;
   type: string;
   meta: Record<string, unknown>;
+  collectionId: string | null;
   deletedAt: Date | null;
 }
 
@@ -115,6 +116,43 @@ export interface Backup {
   createdAt: Date;
 }
 
+export interface ContentType {
+  id: string;
+  name: string;
+  key: string;
+  urlPrefix: string;
+  description: string;
+  icon: string | null;
+  hasCollections: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Collection {
+  id: string;
+  typeKey: string;
+  name: string;
+  slug: string;
+  description: string;
+  coverImage: string;
+  status: "ongoing" | "completed";
+  sortOrder: number;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface Review {
+  id: string;
+  collectionId: string;
+  authorName: string | null;
+  rating: number;
+  content: string;
+  createdAt: Date;
+}
+
 export interface Schema {
   categories: Category[];
   tags: Tag[];
@@ -124,4 +162,7 @@ export interface Schema {
   revisions: PostRevision[];
   settings: Setting[];
   backups: Backup[];
+  contentTypes: ContentType[];
+  collections: Collection[];
+  reviews: Review[];
 }
