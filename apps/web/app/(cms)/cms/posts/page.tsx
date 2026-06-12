@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { PlusCircle, Search, Trash2, ArrowUpDown } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { PlusCircle, Search, Trash2, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { PageHeader } from '@/components/cms/page-header'
 import { PostsTable } from '@/components/cms/posts/posts-table'
-import { fetchPosts, fetchPostCounts, deletePost } from '@/lib/cms-api'
+import { fetchPosts, fetchPostCounts, deletePost, fetchContentTypes } from '@/lib/cms-api'
 import type { Post, PostCounts } from '@/lib/cms-api'
 
 type TabValue = 'all' | 'published' | 'draft' | 'scheduled'
@@ -32,8 +32,14 @@ const TABS: { value: TabValue; label: string }[] = [
   { value: 'scheduled', label: 'Scheduled' },
 ]
 
-export default function PostsPage() {
+function PostsPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const typeKey = searchParams.get('type') || 'article'
+  const collectionId = searchParams.get('collection')
+
+  const [typeName, setTypeName] = useState<string>('')
+  const [collectionName, setCollectionName] = useState<string>('')
   const [tab, setTab] = useState<TabValue>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -42,18 +48,39 @@ export default function PostsPage() {
   const [loading, setLoading] = useState(true)
   const [showBulkDelete, setShowBulkDelete] = useState(false)
 
+  // Resolve type display name
   useEffect(() => {
+    fetchContentTypes()
+      .then(types => {
+        const found = types.find(t => t.key === typeKey)
+        setTypeName(found?.name ?? typeKey)
+      })
+      .catch(() => setTypeName(typeKey))
+  }, [typeKey])
+
+  // Fetch posts + counts
+  useEffect(() => {
+    let cancelled = false
+    const params: Parameters<typeof fetchPosts>[0] = {
+      excludeContent: true,
+      type: typeKey,
+    }
+    if (collectionId) params.collectionId = collectionId
+
     Promise.all([
-      fetchPosts({ excludeContent: true }),
+      fetchPosts(params),
       fetchPostCounts(),
     ])
       .then(([postsData, countsData]) => {
+        if (cancelled) return
         setPosts(postsData.items)
         setCounts(countsData)
       })
       .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [typeKey, collectionId])
 
   const filtered = useMemo(() => {
     let result = posts
@@ -83,23 +110,40 @@ export default function PostsPage() {
     setCounts(prev => ({ ...prev, all: prev.all - 1 }))
   }
 
+  const newPostHref = collectionId
+    ? `/cms/posts/new?type=${typeKey}&collection=${collectionId}`
+    : `/cms/posts/new?type=${typeKey}`
+
+  const heading = collectionId && collectionName
+    ? `Chapters of ${collectionName}`
+    : typeName || 'Posts'
+
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader
-        title="Posts"
-        description={`${counts.all} total posts`}
+        title={heading}
+        description={`${counts.all} total`}
         actions={
-          <Link href="/cms/posts/new">
-            <Button size="sm" className="min-h-[44px] gap-2">
-              <PlusCircle className="size-4" />
-              New Post
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {collectionId && (
+              <Link href={`/cms/collections?type=${typeKey}`}>
+                <Button variant="outline" size="sm" className="min-h-[44px] gap-2">
+                  <ArrowLeft className="size-4" />
+                  Back to Works
+                </Button>
+              </Link>
+            )}
+            <Link href={newPostHref}>
+              <Button size="sm" className="min-h-[44px] gap-2">
+                <PlusCircle className="size-4" />
+                {collectionId ? 'Add Chapter' : `New ${typeName}`}
+              </Button>
+            </Link>
+          </div>
         }
       />
 
       <main className="flex-1 p-4 md:p-6 space-y-4">
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <Tabs value={tab} onValueChange={(v) => { setTab(v as TabValue); setSelected(new Set()) }}>
             <TabsList className="h-11">
@@ -117,11 +161,11 @@ export default function PostsPage() {
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
             <Input
-              placeholder="Search posts..."
+              placeholder={`Search ${typeName.toLowerCase()}…`}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 h-11"
-              aria-label="Search posts"
+              aria-label={`Search ${typeName}`}
             />
           </div>
 
@@ -138,12 +182,9 @@ export default function PostsPage() {
           )}
         </div>
 
-        {/* Table */}
         {loading ? (
           <div className="animate-pulse space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-muted rounded-lg" />
-            ))}
+            {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-muted rounded-lg" />)}
           </div>
         ) : (
           <PostsTable
@@ -156,13 +197,12 @@ export default function PostsPage() {
         )}
       </main>
 
-      {/* Bulk delete confirmation */}
       <AlertDialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Move to trash?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selected.size} post{selected.size > 1 ? 's' : ''} will be moved to trash. You can restore them from the Trash page.
+              {selected.size} item{selected.size > 1 ? 's' : ''} will be moved to trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -174,5 +214,13 @@ export default function PostsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+export default function PostsPage() {
+  return (
+    <Suspense>
+      <PostsPageInner />
+    </Suspense>
   )
 }

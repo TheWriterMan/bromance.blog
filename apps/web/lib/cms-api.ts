@@ -218,6 +218,7 @@ function transformPost(raw: Record<string, any>): Post {
 export interface FetchPostsParams {
   status?: string;
   categoryId?: string;
+  collectionId?: string;
   search?: string;
   type?: string;
   tag?: string;
@@ -231,6 +232,7 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<PostLis
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
   if (params.categoryId) query.set('category_id', params.categoryId);
+  if (params.collectionId) query.set('collection_id', params.collectionId);
   if (params.search) query.set('search', params.search);
   if (params.type) query.set('type', params.type);
   if (params.tag) query.set('tag', params.tag);
@@ -719,4 +721,8 @@ export async function submitReview(
     content: raw.content,
     createdAt: raw.created_at,
   };
+}
+
+export async function deleteReview(collectionId: string, reviewId: string): Promise<void> {
+  await apiFetch(`/api/collections/${collectionId}/reviews/${reviewId}`, { method: 'DELETE' });
 }

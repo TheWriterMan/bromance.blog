@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Save, Globe, ChevronRight, UserCircle, HardDrive } from 'lucide-react'
+import { Save, Globe, ChevronRight, UserCircle, HardDrive, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/cms/page-header'
-import { fetchSettings, updateSettings } from '@/lib/cms-api'
+import { toast } from 'sonner'
+import { fetchSettings, updateSettings, createContentType } from '@/lib/cms-api'
 
 const TIMEZONES = [
   'America/Los_Angeles', 'America/Denver', 'America/Chicago', 'America/New_York',
@@ -37,6 +38,10 @@ export default function SiteSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [newTypeName, setNewTypeName] = useState('')
+  const [newTypePrefix, setNewTypePrefix] = useState('')
+  const [newTypeIcon, setNewTypeIcon] = useState('')
+  const [creatingType, setCreatingType] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -53,10 +58,33 @@ export default function SiteSettingsPage() {
     setSaving(true)
     try {
       await updateSettings(settings)
+      toast.success('Settings saved')
     } catch (e) {
       console.error(e)
+      toast.error('Failed to save settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleCreateContentType() {
+    if (!newTypeName.trim()) return
+    setCreatingType(true)
+    try {
+      await createContentType({
+        name: newTypeName.trim(),
+        url_prefix: newTypePrefix.trim() || undefined,
+        icon: newTypeIcon.trim() || undefined,
+      })
+      toast.success(`Content type "${newTypeName}" created`)
+      setNewTypeName('')
+      setNewTypePrefix('')
+      setNewTypeIcon('')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to create content type'
+      toast.error(msg)
+    } finally {
+      setCreatingType(false)
     }
   }
 
@@ -183,6 +211,42 @@ export default function SiteSettingsPage() {
                 <Input type="email" value={settings.contact_email || ''} onChange={e => set('contact_email', e.target.value)} placeholder="hello@bromance.blog" className="h-11" />
               </SettingRow>
             </CardContent>
+          </Card>
+
+          {/* Content Types */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">New Content Type</CardTitle>
+              <CardDescription className="text-xs">Add a new type (e.g. Recipes, Comics). It will appear in the sidebar automatically.</CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y divide-border p-0 px-4">
+              <SettingRow label="Name *" description="Display name for this content type.">
+                <Input value={newTypeName} onChange={e => setNewTypeName(e.target.value)} placeholder="e.g. Recipes" className="h-11" />
+              </SettingRow>
+              <SettingRow label="URL Prefix" description="Optional. Defaults to kebab-case of name.">
+                <Input value={newTypePrefix} onChange={e => setNewTypePrefix(e.target.value)} placeholder="e.g. recipes" className="h-11 font-mono text-sm" />
+              </SettingRow>
+              <SettingRow label="Icon" description="Lucide icon name (e.g. BookOpen, FileText).">
+                <Input value={newTypeIcon} onChange={e => setNewTypeIcon(e.target.value)} placeholder="e.g. BookOpen" className="h-11" />
+              </SettingRow>
+            </CardContent>
+            <div className="px-4 pb-4 pt-2">
+              <Button
+                size="sm"
+                className="min-h-[44px] gap-2"
+                onClick={handleCreateContentType}
+                disabled={creatingType || !newTypeName.trim()}
+              >
+                {creatingType ? (
+                  <span className="flex items-center gap-2">
+                    <span className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Creating…
+                  </span>
+                ) : (
+                  <><Plus className="size-4" /> Create Content Type</>
+                )}
+              </Button>
+            </div>
           </Card>
 
           {/* Maintenance */}
