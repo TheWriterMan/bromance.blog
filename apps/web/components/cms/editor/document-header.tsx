@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronDown, ImagePlus, X, Upload } from 'lucide-react';
 import type { Category, MediaItem } from '@repo/db';
 import { getCloudinaryUrl } from '@/lib/utils';
+import type { ContentType, CollectionItem } from '@/lib/cms-api';
 
 interface DocumentHeaderProps {
   title: string;
@@ -22,6 +23,15 @@ interface DocumentHeaderProps {
   status: 'draft' | 'published' | 'scheduled';
   onStatusChange: (status: 'draft' | 'published' | 'scheduled') => void;
   mediaItems: MediaItem[];
+  // Collection / chapter props
+  postType: string;
+  onPostTypeChange: (type: string) => void;
+  collectionId: string;
+  onCollectionIdChange: (id: string) => void;
+  chapterNumber: number | '';
+  onChapterNumberChange: (n: number | '') => void;
+  locked: boolean;
+  onLockedChange: (v: boolean) => void;
 }
 
 export default function DocumentHeader({
@@ -41,10 +51,42 @@ export default function DocumentHeader({
   status,
   onStatusChange,
   mediaItems,
+  postType,
+  onPostTypeChange,
+  collectionId,
+  onCollectionIdChange,
+  chapterNumber,
+  onChapterNumberChange,
+  locked,
+  onLockedChange,
 }: DocumentHeaderProps) {
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch content types + collections
+  const [contentTypes, setContentTypes] = useState<ContentType[]>([]);
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
+
+  useEffect(() => {
+    fetch('/api/content-types')
+      .then(r => r.json())
+      .then((data: ContentType[]) => setContentTypes(data))
+      .catch(() => {});
+  }, []);
+
+  const selectedType = contentTypes.find(t => t.key === postType);
+
+  useEffect(() => {
+    if (!selectedType?.hasCollections) {
+      setCollections([]);
+      return;
+    }
+    fetch(`/api/collections?type=${encodeURIComponent(postType)}`)
+      .then(r => r.json())
+      .then((data: CollectionItem[]) => setCollections(data))
+      .catch(() => {});
+  }, [postType, selectedType?.hasCollections]);
 
   const hasImage = featuredImage && featuredImage !== 'samples/workspace';
 
@@ -253,6 +295,90 @@ export default function DocumentHeader({
             <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-400 pointer-events-none" />
           </div>
         </div>
+
+        {/* Type */}
+        {contentTypes.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Type</span>
+            <div className="relative">
+              <select
+                value={postType}
+                onChange={(e) => onPostTypeChange(e.target.value)}
+                aria-label="Content type"
+                className="appearance-none pl-2 pr-6 py-1 text-sm font-medium text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 cursor-pointer min-h-[32px]"
+              >
+                {contentTypes.map((ct) => (
+                  <option key={ct.key} value={ct.key}>{ct.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-400 pointer-events-none" />
+            </div>
+          </div>
+        )}
+
+        {/* Work, Chapter #, Locked — only when type hasCollections */}
+        {selectedType?.hasCollections && (
+          <>
+            {/* Work / Collection */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Work</span>
+              <div className="relative">
+                <select
+                  value={collectionId}
+                  onChange={(e) => onCollectionIdChange(e.target.value)}
+                  aria-label="Collection / work"
+                  className="appearance-none pl-2 pr-6 py-1 text-sm font-medium text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 cursor-pointer min-h-[32px]"
+                >
+                  <option value="">None</option>
+                  {collections.map((col) => (
+                    <option key={col.id} value={col.id}>{col.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Chapter # */}
+            <div className="flex items-center gap-1.5">
+              <label
+                htmlFor="doc-chapter-number"
+                className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider"
+              >
+                Ch.
+              </label>
+              <input
+                id="doc-chapter-number"
+                type="number"
+                min={1}
+                value={chapterNumber === '' ? '' : chapterNumber}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onChapterNumberChange(v === '' ? '' : parseInt(v, 10));
+                }}
+                placeholder="—"
+                aria-label="Chapter number"
+                className="w-16 px-2 py-1 text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 min-h-[32px]"
+              />
+            </div>
+
+            {/* Locked toggle */}
+            <div className="flex items-center gap-1.5 min-h-[44px]">
+              <input
+                type="checkbox"
+                id="doc-locked"
+                checked={locked}
+                onChange={(e) => onLockedChange(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
+              />
+              <label
+                htmlFor="doc-locked"
+                className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider cursor-pointer select-none"
+              >
+                Locked
+              </label>
+            </div>
+          </>
+        )}
 
         {/* Slug — moved to settings panel */}
       </div>

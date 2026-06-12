@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Extension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
@@ -158,6 +158,8 @@ interface EditorCanvasProps {
 
 export default function EditorCanvas({ postId }: EditorCanvasProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   // Data
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -174,6 +176,14 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   const [categoryId, setCategoryId] = useState('');
   const [featuredImage, setFeaturedImage] = useState('samples/workspace');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
+  // Collection / chapter fields
+  const [postType, setPostType] = useState('article');
+  const [collectionId, setCollectionId] = useState('');
+  const [chapterNumber, setChapterNumber] = useState<number | ''>('');
+  const [locked, setLocked] = useState(false);
+  // Keep a ref to the full meta object so we can spread it on save
+  const existingMetaRef = useRef<Record<string, unknown>>({});
 
   // SEO
   const [metaTitle, setMetaTitle] = useState('');
@@ -219,6 +229,9 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       published_at: status === 'scheduled' && publishedAt
         ? new Date(publishedAt).toISOString()
         : status === 'published' ? new Date().toISOString() : null,
+      type: postType,
+      collection_id: collectionId || null,
+      meta: { ...existingMetaRef.current, chapterNumber, locked },
       isAutosave: false,
       createCheckpoint: true,
       checkpointNote: `Saved: ${new Date().toLocaleTimeString()}`,
@@ -241,7 +254,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       setSavingState('error');
       setTimeout(() => setSavingState('idle'), 3000);
     }
-  }, [postId, title, slug, content, summary, status, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage, publishedAt, savingState]);
+  }, [postId, title, slug, content, summary, status, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage, publishedAt, savingState, postType, collectionId, chapterNumber, locked]);
 
   const publishPost = useCallback(async () => {
     setStatus('published');
@@ -266,6 +279,9 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       noindex,
       og_image: ogImage,
       published_at: new Date().toISOString(),
+      type: postType,
+      collection_id: collectionId || null,
+      meta: { ...existingMetaRef.current, chapterNumber, locked },
       isAutosave: false,
       createCheckpoint: true,
       checkpointNote: 'Published',
@@ -284,7 +300,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       setSavingState('error');
       setTimeout(() => setSavingState('idle'), 3000);
     }
-  }, [postId, title, slug, content, summary, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage]);
+  }, [postId, title, slug, content, summary, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage, postType, collectionId, chapterNumber, locked]);
 
   // TipTap editor
   const tipTapEditor = useEditor({
@@ -360,14 +376,22 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       try {
         // If creating a new post, POST first then redirect
         if (postId === 'new') {
+          const typeParam = searchParams.get('type') || 'article';
+          const collectionParam = searchParams.get('collection') || null;
           const createRes = await fetch('/api/posts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'Untitled Post', status: 'draft' }),
+            body: JSON.stringify({
+              title: 'Untitled Post',
+              status: 'draft',
+              type: typeParam,
+              collection_id: collectionParam,
+            }),
           });
           if (createRes.ok) {
             const newPost = await createRes.json();
-            router.replace(`/cms/posts/${newPost.id}`);
+            const redirectUrl = `/cms/posts/${newPost.id}${typeParam !== 'article' ? `?type=${typeParam}` : ''}${collectionParam ? `&collection=${collectionParam}` : ''}`;
+            router.replace(redirectUrl);
           }
           return;
         }
@@ -422,6 +446,12 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
           setCanonicalUrl(post.canonical_url || '');
           setNoindex(post.noindex || 0);
           setOgImage(post.ogImage || '');
+          // Collection / chapter fields
+          setPostType(post.type || 'article');
+          setCollectionId(post.collection_id || '');
+          setChapterNumber(post.meta?.chapterNumber ?? '');
+          setLocked(post.meta?.locked ?? false);
+          existingMetaRef.current = post.meta || {};
           setLastServerSave(post.updated_at ? new Date(post.updated_at).getTime() : Date.now());
         }
 
@@ -444,7 +474,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     }
     init();
     return () => { active = false; };
-  }, [postId]);
+  }, [postId, searchParams]);
 
   // Set editor content once loaded
   const contentLoadedRef = useRef(false);
@@ -648,6 +678,14 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
               status={status}
               onStatusChange={setStatus}
               mediaItems={mediaItems}
+              postType={postType}
+              onPostTypeChange={(t) => { setPostType(t); setCollectionId(''); }}
+              collectionId={collectionId}
+              onCollectionIdChange={setCollectionId}
+              chapterNumber={chapterNumber}
+              onChapterNumberChange={setChapterNumber}
+              locked={locked}
+              onLockedChange={setLocked}
             />
 
             {/* TipTap content */}
