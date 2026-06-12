@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen } from 'lucide-react';
-import { getNovelChapters } from '@/lib/blog-data';
+import { BookOpen, Coffee } from 'lucide-react';
+import { getNovelChapters, getSiteSettings } from '@/lib/blog-data';
 import type { BlogPost } from '@/lib/blog-data';
 import { getNovelMeta } from '@/lib/novels-meta';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
@@ -33,7 +33,10 @@ function groupByNovel(chapters: BlogPost[]): NovelGroup[] {
 }
 
 export default async function NovelsPage() {
-  const chapters = await getNovelChapters();
+  const [chapters, settings] = await Promise.all([
+    getNovelChapters(),
+    getSiteSettings(),
+  ]);
   const novels = groupByNovel(chapters);
 
   return (
@@ -136,6 +139,45 @@ export default async function NovelsPage() {
               </section>
             );
           })}
+        </div>
+      )}
+
+      {/* Support section */}
+      {settings.kofiLink && (
+        <div className="mt-16 space-y-6">
+          {/* Support Goal */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="border border-[var(--color-primary)]/10 p-6 rounded bg-[var(--color-primary)]/[0.02]">
+              <h4 className="font-extrabold text-sm text-[var(--color-primary)] mb-2 uppercase tracking-wide">Weekly Schedule</h4>
+              <p className="text-sm text-[var(--color-primary)]/70 leading-relaxed">
+                We release new chapters every week. Follow on Ko-Fi for notifications when new chapters drop.
+              </p>
+            </div>
+            <div className="border border-[var(--color-primary)]/10 p-6 rounded bg-[var(--color-primary)]/[0.02]">
+              <h4 className="font-extrabold text-sm text-[var(--color-primary)] mb-2 uppercase tracking-wide">Support Goal</h4>
+              <p className="text-sm text-[var(--color-primary)]/70 leading-relaxed">
+                For every $15 raised on Ko-Fi, we translate and release a guaranteed extra bonus chapter!
+              </p>
+            </div>
+          </div>
+
+          {/* Support CTA */}
+          <div className="p-8 border border-[var(--color-primary)]/20 flex flex-col sm:flex-row items-center gap-6 justify-between bg-[var(--color-primary)]/5 rounded">
+            <div>
+              <h3 className="text-2xl font-black mb-2 text-[var(--color-primary)]">Support This Translation</h3>
+              <p className="text-sm font-medium text-[var(--color-primary)]/70">
+                Help us keep translating by buying a coffee. Every contribution counts.
+              </p>
+            </div>
+            <a
+              href={settings.kofiLink}
+              target="_blank"
+              rel="noreferrer"
+              className="whitespace-nowrap flex items-center gap-2 px-6 py-3 font-bold text-lg border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-bg)] transition-colors duration-300 rounded"
+            >
+              <Coffee className="w-5 h-5" /> Support on Ko-Fi
+            </a>
+          </div>
         </div>
       )}
     </div>
