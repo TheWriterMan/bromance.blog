@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import CmsShell from '@/components/cms/layout/cms-shell';
+import { PageHeader } from '@/components/cms/page-header';
 import { DESIGN } from '@/lib/design';
 import { Trash2 } from 'lucide-react';
 
@@ -93,16 +93,13 @@ export default function CmsCommentsPage() {
   }
 
   return (
-    <CmsShell>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Comments</h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              {comments.length} comment{comments.length !== 1 ? 's' : ''} across all posts.
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <PageHeader
+        title="Comments"
+        description={`${comments.length} comment${comments.length !== 1 ? 's' : ''} across all posts.`}
+      />
+
+      <main className="flex-1 p-4 md:p-6 space-y-4">
 
         {loading ? (
           <div className="space-y-3">
@@ -145,7 +142,7 @@ export default function CmsCommentsPage() {
             ))}
           </div>
         )}
-      </div>
-    </CmsShell>
+      </main>
+    </div>
   );
 }

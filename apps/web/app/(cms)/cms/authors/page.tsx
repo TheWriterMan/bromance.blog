@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import CmsShell from '@/components/cms/layout/cms-shell';
+import { PageHeader } from '@/components/cms/page-header';
 import { DESIGN } from '@/lib/design';
 
 interface AuthorData {
@@ -129,24 +129,26 @@ export default function CmsAuthorsPage() {
 
   if (loading) {
     return (
-      <CmsShell>
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 bg-zinc-200 w-48 rounded" />
-          <div className="h-64 bg-zinc-100 rounded-lg" />
-        </div>
-      </CmsShell>
+      <div className="flex flex-col min-h-screen">
+        <PageHeader title="Author Profile" />
+        <main className="flex-1 p-4 md:p-6">
+          <div className="space-y-6 animate-pulse">
+            <div className="h-8 bg-zinc-200 w-48 rounded" />
+            <div className="h-64 bg-zinc-100 rounded-lg" />
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <CmsShell>
-      <div className="space-y-6 max-w-2xl">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Author Profile</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            Manage how the author appears on the public blog.
-          </p>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <PageHeader
+        title="Author Profile"
+        description="Manage how the author appears on the public blog."
+      />
+
+      <main className="flex-1 p-4 md:p-6 space-y-4">
 
         {/* Status message */}
         {message && (
@@ -265,7 +267,7 @@ export default function CmsAuthorsPage() {
             </button>
           </div>
         </div>
-      </div>
-    </CmsShell>
+      </main>
+    </div>
   );
 }

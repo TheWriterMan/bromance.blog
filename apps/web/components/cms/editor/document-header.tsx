@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronDown, ImagePlus, X, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Category, MediaItem } from '@repo/db';
 import { getCloudinaryUrl } from '@/lib/utils';
 import type { ContentType } from '@/lib/cms-api';
@@ -74,9 +75,13 @@ export default function DocumentHeader({
         const data = await res.json();
         onFeaturedImageChange(data.cloudinary_id);
         setCoverPickerOpen(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || 'Upload failed');
       }
     } catch (err) {
       console.error('Upload failed:', err);
+      toast.error('Upload failed — check your connection');
     } finally {
       setUploading(false);
     }

@@ -13,6 +13,7 @@ import UnderlineExtension from '@tiptap/extension-underline';
 import DropCursor from '@tiptap/extension-dropcursor';
 import Youtube from '@tiptap/extension-youtube';
 import type { Category, Tag, MediaItem, PostRevision } from '@repo/db';
+import { toast } from 'sonner';
 
 import BubbleMenu from './bubble-menu';
 import FloatingInsert from './floating-insert';
@@ -245,9 +246,11 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       setIsDirty(false);
       setLastServerSave(Date.now());
       deleteDraft(postId).catch(() => {});
+      if (!isAutosave) toast.success('Post saved');
       setTimeout(() => setSavingState('idle'), 2000);
     } catch {
       setSavingState('error');
+      toast.error('Failed to save post');
       setTimeout(() => setSavingState('idle'), 3000);
     }
   }, [postId, title, slug, content, summary, status, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage, publishedAt, savingState, postType]);
@@ -290,9 +293,11 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       });
       if (!res.ok) throw new Error('Publish failed');
       setSavingState('saved');
+      toast.success('Post published');
       setTimeout(() => setSavingState('idle'), 2000);
     } catch {
       setSavingState('error');
+      toast.error('Failed to publish post');
       setTimeout(() => setSavingState('idle'), 3000);
     }
   }, [postId, title, slug, content, summary, categoryId, featuredImage, selectedTagIds, metaTitle, metaDescription, canonicalUrl, noindex, ogImage, postType]);
@@ -500,7 +505,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [savePost, loading, content, title, summary]);
+  }, [savePost, loading, content, title, summary, publishedAt, status, categoryId, featuredImage, selectedTagIds, postType]);
 
   // IndexedDB local persistence — debounced 1s
   useEffect(() => {
@@ -515,7 +520,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
     }, 1000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, title, content, summary, status, categoryId, selectedTagIds, featuredImage, slug, postId]);
+  }, [loading, title, content, summary, status, categoryId, selectedTagIds, featuredImage, slug, postId, publishedAt, postType]);
 
   // beforeunload handler
   useEffect(() => {

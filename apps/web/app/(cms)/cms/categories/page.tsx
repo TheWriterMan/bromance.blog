@@ -143,7 +143,7 @@ export default function CategoriesPage() {
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Categories" />
         <main className="flex-1 p-4 md:p-6">
-          <div className="animate-pulse space-y-2 max-w-2xl">
+          <div className="animate-pulse space-y-2">
             {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-muted rounded-xl" />)}
           </div>
         </main>
@@ -165,7 +165,7 @@ export default function CategoriesPage() {
       />
 
       <main className="flex-1 p-4 md:p-6">
-        <div className="max-w-2xl space-y-2">
+        <div className="space-y-2">
           {roots.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <FolderOpen className="size-10 text-muted-foreground/40" aria-hidden="true" />

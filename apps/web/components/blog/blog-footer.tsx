@@ -19,8 +19,13 @@ export default function BlogFooter({
   return (
     <footer className="mt-20 py-12 px-6 border-t border-solid border-[var(--color-primary)] max-w-7xl mx-auto w-full flex flex-col md:flex-row justify-between items-start gap-8">
       <div>
-        <h2 className="text-3xl font-black tracking-tighter text-[var(--color-primary)]">{siteName}</h2>
-        <p className="mt-2 text-sm font-medium text-[var(--color-primary)] opacity-80">{description}</p>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Bromance.blog" className="w-10 h-10 rounded-lg" />
+          <div>
+            <h2 className="text-3xl font-black tracking-tighter text-[var(--color-primary)]">Bromance.blog</h2>
+            <p className="mt-1 text-sm font-medium text-[var(--color-primary)] opacity-80">{description}</p>
+          </div>
+        </div>
         <p className="mt-6 text-xs font-semibold text-[var(--color-primary)] opacity-50">{copyright}</p>
       </div>
       <div className="flex flex-wrap gap-12">

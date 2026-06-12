@@ -34,14 +34,11 @@ export default function BlogHeader({ siteName, kofiLink, categories }: BlogHeade
         <header className="pt-6 pb-4 px-6 max-w-7xl mx-auto w-full">
           <div className="flex justify-between items-end mb-6">
             <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#cc0000] text-white flex items-center justify-center font-black rounded-lg shadow-md tracking-tighter text-xl">
-                B
-              </div>
+              <img src="/logo.png" alt="Bromance.blog" className="w-10 h-10 md:w-12 md:h-12 rounded-lg shadow-md" />
               <div>
                 <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-[var(--color-primary)] leading-none">
-                  {siteName}
+                  Bromance.blog
                 </h1>
-                <span className="text-[10px] uppercase tracking-widest font-bold opacity-60">bromance.blog</span>
               </div>
             </Link>
 
@@ -105,10 +102,8 @@ export default function BlogHeader({ siteName, kofiLink, categories }: BlogHeade
         <div className="fixed inset-0 bg-[var(--color-bg)] z-50 flex flex-col overflow-y-auto md:hidden">
           <div className="flex justify-between items-center p-6 border-b border-[var(--color-primary)]/10">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#cc0000] text-white flex items-center justify-center font-black rounded-md tracking-tighter text-lg">
-                B
-              </div>
-              <h2 className="text-xl font-black text-[var(--color-primary)]">{siteName}</h2>
+              <img src="/logo.png" alt="Bromance.blog" className="w-8 h-8 rounded-md" />
+              <h2 className="text-xl font-black text-[var(--color-primary)]">Bromance.blog</h2>
             </div>
             <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="text-[var(--color-primary)] active:scale-95 transition-transform min-h-[44px] min-w-[44px] flex items-center justify-center">
               <X className="w-6 h-6" />

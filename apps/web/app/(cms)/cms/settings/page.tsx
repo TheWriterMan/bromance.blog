@@ -93,7 +93,7 @@ export default function SiteSettingsPage() {
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Site Settings" />
         <main className="flex-1 p-4 md:p-6">
-          <div className="animate-pulse space-y-4 max-w-2xl">
+          <div className="animate-pulse space-y-4">
             <div className="h-32 bg-muted rounded-lg" />
             <div className="h-48 bg-muted rounded-lg" />
           </div>
@@ -124,7 +124,7 @@ export default function SiteSettingsPage() {
       />
 
       <main className="flex-1 p-4 md:p-6">
-        <div className="max-w-2xl space-y-6">
+        <div className="space-y-6">
           {/* Quick nav */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[

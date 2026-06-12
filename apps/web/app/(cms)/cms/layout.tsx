@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { CmsSidebar } from '@/components/cms/cms-sidebar';
 
@@ -26,6 +27,7 @@ export default function CmsLayout({
       <SidebarInset className="min-h-screen">
         {children}
       </SidebarInset>
+      <Toaster position="bottom-right" richColors />
     </SidebarProvider>
   );
 }

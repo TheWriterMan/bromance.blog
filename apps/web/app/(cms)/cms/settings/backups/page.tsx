@@ -77,7 +77,7 @@ export default function BackupsPage() {
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Backups" />
         <main className="flex-1 p-4 md:p-6">
-          <div className="animate-pulse space-y-4 max-w-3xl">
+          <div className="animate-pulse space-y-4">
             <div className="h-24 bg-muted rounded-lg" />
             <div className="h-48 bg-muted rounded-lg" />
           </div>
@@ -106,7 +106,7 @@ export default function BackupsPage() {
       />
 
       <main className="flex-1 p-4 md:p-6">
-        <div className="max-w-3xl space-y-4">
+        <div className="space-y-4">
           {backups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <HardDrive className="size-10 text-muted-foreground/40" aria-hidden="true" />

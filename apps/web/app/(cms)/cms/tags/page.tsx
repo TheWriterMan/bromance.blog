@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import CmsShell from '@/components/cms/layout/cms-shell';
 import ConfirmDialog from '@/components/cms/shared/confirm-dialog';
+import { PageHeader } from '@/components/cms/page-header';
 import { Plus, Trash2, Check, X } from 'lucide-react';
 
 interface Tag {
@@ -83,10 +83,11 @@ export default function TagsPage() {
   };
 
   return (
-    <CmsShell>
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900">Tags</h1>
+    <div className="flex flex-col min-h-screen">
+      <PageHeader
+        title="Tags"
+        description={`${tags.length} tags`}
+        actions={
           <button
             onClick={() => setShowAddForm(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors min-h-[44px]"
@@ -94,7 +95,10 @@ export default function TagsPage() {
             <Plus className="h-4 w-4" />
             Add Tag
           </button>
-        </div>
+        }
+      />
+
+      <main className="flex-1 p-4 md:p-6 space-y-4">
 
         {/* Add Form */}
         {showAddForm && (
@@ -178,7 +182,7 @@ export default function TagsPage() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />
-      </div>
-    </CmsShell>
+      </main>
+    </div>
   );
 }
