@@ -537,3 +537,59 @@ export async function updateSettings(data: SiteSettings): Promise<SiteSettings> 
     body: JSON.stringify(data),
   });
 }
+
+// ─── Content Types ────────────────────────────────────────────────────────────
+
+export interface ContentType {
+  id: string;
+  name: string;
+  key: string;
+  urlPrefix: string;
+  description: string;
+  icon: string | null;
+  hasCollections: boolean;
+  sortOrder: number;
+}
+
+function transformContentType(raw: Record<string, any>): ContentType {
+  return {
+    id: raw.id,
+    name: raw.name,
+    key: raw.key,
+    urlPrefix: raw.url_prefix,
+    description: raw.description || '',
+    icon: raw.icon ?? null,
+    hasCollections: raw.has_collections ?? false,
+    sortOrder: raw.sort_order ?? 0,
+  };
+}
+
+export async function fetchContentTypes(): Promise<ContentType[]> {
+  const raw = await apiFetch<any[]>('/api/content-types');
+  return raw.map(transformContentType);
+}
+
+export async function createContentType(
+  data: { name: string; url_prefix?: string; description?: string; icon?: string; has_collections?: boolean; sort_order?: number }
+): Promise<ContentType> {
+  const raw = await apiFetch<any>('/api/content-types', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return transformContentType(raw);
+}
+
+export async function updateContentType(
+  id: string,
+  data: Partial<{ name: string; url_prefix: string; description: string; icon: string; sort_order: number }>
+): Promise<ContentType> {
+  const raw = await apiFetch<any>(`/api/content-types/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return transformContentType(raw);
+}
+
+export async function deleteContentType(id: string): Promise<void> {
+  await apiFetch(`/api/content-types/${id}`, { method: 'DELETE' });
+}
