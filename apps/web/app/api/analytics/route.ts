@@ -61,17 +61,6 @@ export async function GET() {
       };
     }).sort((a, b) => b.count - a.count).slice(0, 6);
 
-    // Simulated views history (e.g. over last 7 days)
-    const viewsHistory = [
-      { date: 'Jun 1', views: Math.floor(totalViews * 0.10) },
-      { date: 'Jun 2', views: Math.floor(totalViews * 0.12) },
-      { date: 'Jun 3', views: Math.floor(totalViews * 0.15) },
-      { date: 'Jun 4', views: Math.floor(totalViews * 0.14) },
-      { date: 'Jun 5', views: Math.floor(totalViews * 0.18) },
-      { date: 'Jun 6', views: Math.floor(totalViews * 0.16) },
-      { date: 'Jun 7', views: Math.floor(totalViews * 0.15) }
-    ];
-
     return NextResponse.json({
       totalViews,
       totalPosts,
@@ -84,7 +73,9 @@ export async function GET() {
       popularPosts,
       categoryDistribution,
       tagDistribution,
-      viewsHistory
+      viewsHistory: [],
+      viewsHistoryEstimated: true,
+      viewsByPost: popularPosts,
     });
   } catch (error) {
     console.error('Analytics compute error:', error);

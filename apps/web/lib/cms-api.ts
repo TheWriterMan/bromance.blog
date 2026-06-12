@@ -107,6 +107,15 @@ export interface Analytics {
   categoryDistribution: Array<{ id: string; name: string; count: number }>;
   tagDistribution: Array<{ id: string; name: string; count: number }>;
   viewsHistory: Array<{ date: string; views: number }>;
+  viewsHistoryEstimated?: boolean;
+  viewsByPost?: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    views: number;
+    status: string;
+    publishedAt: string | null;
+  }>;
 }
 
 export interface Backup {

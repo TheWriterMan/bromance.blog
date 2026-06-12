@@ -13,23 +13,6 @@ import { StatusBadge } from '@/components/cms/status-badge'
 import { fetchAnalytics, fetchPosts, getCloudinaryUrl } from '@/lib/cms-api'
 import type { Analytics, Post } from '@/lib/cms-api'
 
-function ViewsBarChart({ data }: { data: { date: string; views: number }[] }) {
-  const max = Math.max(...data.map(d => d.views), 1)
-  return (
-    <div className="flex items-end gap-1.5 h-16">
-      {data.map((d, i) => (
-        <div key={i} className="flex flex-col items-center gap-1 flex-1">
-          <div
-            className="w-full rounded-sm bg-accent/80 transition-all hover:bg-accent"
-            style={{ height: `${(d.views / max) * 64}px` }}
-            title={`${d.date}: ${d.views.toLocaleString()} views`}
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function RecentPostRow({ post }: { post: Post }) {
   const imageUrl = post.featuredImage
     ? getCloudinaryUrl(post.featuredImage, { width: 80, height: 80, crop: 'fill' })
@@ -153,25 +136,26 @@ export default function DashboardPage() {
         {/* Views + Content breakdown */}
         {analytics && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Weekly views chart */}
+            {/* Top Posts by Views */}
             <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-sm font-semibold">Views This Week</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">Daily page views over the last 7 days</CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {analytics.viewsHistory.reduce((s, d) => s + d.views, 0).toLocaleString()} total
-                  </Badge>
+                <div>
+                  <CardTitle className="text-sm font-semibold">Top Posts by Views</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">All-time views per post</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="pb-4">
-                <ViewsBarChart data={analytics.viewsHistory} />
-                <div className="flex justify-between mt-2">
-                  {analytics.viewsHistory.map((d) => (
-                    <span key={d.date} className="text-[10px] text-muted-foreground flex-1 text-center">{d.date}</span>
+                <div className="space-y-2">
+                  {(analytics.popularPosts ?? []).slice(0, 5).map((post, i) => (
+                    <div key={post.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground w-4 text-right flex-shrink-0">{i + 1}.</span>
+                      <span className="flex-1 truncate text-foreground">{post.title}</span>
+                      <Badge variant="secondary" className="text-xs flex-shrink-0">{post.views.toLocaleString()}</Badge>
+                    </div>
                   ))}
+                  {(analytics.popularPosts ?? []).length === 0 && (
+                    <p className="text-xs text-muted-foreground">No data yet</p>
+                  )}
                 </div>
                 <Separator className="my-3" />
                 <div className="grid grid-cols-2 gap-3">
