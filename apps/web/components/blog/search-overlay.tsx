@@ -105,7 +105,7 @@ export default function SearchOverlay({
           {results.map((post) => (
             <Link
               key={post.id}
-              href={`/${post.slug}`}
+              href={`/articles/${post.slug}`}
               onClick={onClose}
               className="flex gap-4 items-center px-5 py-3 hover:bg-[var(--color-primary)]/5 transition-colors border-b border-[var(--color-primary)]/5 last:border-0"
             >

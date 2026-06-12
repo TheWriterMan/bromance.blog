@@ -12,7 +12,7 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post, authorName, variant = 'grid' }: PostCardProps) {
-  const href = `/${post.slug}`;
+  const href = `/articles/${post.slug}`;
   const img = getCloudinaryUrl(post.featuredImage, 'featured');
 
   if (variant === 'feature') {

@@ -22,7 +22,7 @@ export async function GET() {
 
   const items = posts
     .map((p) => {
-      const link = `${base}/${p.slug}`;
+      const link = `${base}/articles/${p.slug}`;
       const description = p.summary || extractPlainText(p.content, 200);
       const pubDate = p.publishedAt ? new Date(p.publishedAt).toUTCString() : '';
       return `    <item>
