@@ -1,0 +1,9 @@
+$ pnpm --filter @repo/db type-check
+$ tsc --noEmit
+[PASS - exit code 0]
+
+$ pnpm --filter web type-check
+$ tsc --noEmit
+[PASS - exit code 0]
+
+Note: pnpm type-check (turbo run type-check) exits with code 3221225781 (Windows process crash unrelated to TS errors - turbo binary issue). Per-filter checks pass cleanly.

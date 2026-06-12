@@ -48,4 +48,8 @@ See `.github/workflows/deploy.yml` — reference implementation with HTTP status
 
 ## Database Rules
 
-**NEVER touch, modify, seed, reset, migrate, or alter the Supabase database.** The data is there and correct. If something doesn't display, the problem is ALWAYS in the app code (API routes, queries, components) — never the database. Do not run migration scripts, seed scripts, or any write operations against the production database without explicit user instruction.
+**Additive, non-destructive migrations are allowed** — new tables, new columns, new indexes. These are fine when the work genuinely needs them.
+
+**NEVER run destructive operations** against the Supabase database: no `DROP`, `DELETE`, `TRUNCATE`, `RESET`, no removing/renaming existing columns or tables, no seeding/overwriting existing rows, nothing that can cause data loss. The existing data (posts, categories, media, etc.) is correct and must be preserved.
+
+When a migration is needed: provide the exact SQL, make it additive only, and never assume it runs automatically. If something doesn't display, suspect the app code (API routes, queries, components) before the data.

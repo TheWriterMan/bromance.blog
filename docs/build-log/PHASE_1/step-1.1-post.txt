@@ -1,0 +1,7 @@
+$ pnpm --filter @repo/db type-check
+$ tsc --noEmit
+[PASS - exit code 0]
+
+$ pnpm --filter web type-check
+$ tsc --noEmit
+[PASS - exit code 0]

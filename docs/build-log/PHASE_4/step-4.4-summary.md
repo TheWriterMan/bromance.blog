@@ -1,0 +1,26 @@
+## Implementation Summary
+
+- **Step:** Phase 4, Step 4 — "Extend posts APIs to carry `collection_id` and chapter meta"
+- **Files modified:**
+  - `apps/web/app/api/posts/route.ts` — added `?collection_id=` filter, `collectionId` to GET select + response map, `collection_id` destructure in POST + insert payload + response, chapter meta comment
+  - `apps/web/app/api/posts/[id]/route.ts` — added `collection_id` to GET response, `collection_id` destructure in PUT + `!== undefined` guard in `updatePayload` + PUT response
+- **Files created:** none
+- **Baseline state:**
+  - Build: PASS
+  - Lint: N/A (type-check only per step verification)
+  - Tests: N/A
+  - Full output: `docs/build-log/PHASE_4/step-4.4-baseline.txt`
+- **Post-implementation state:**
+  - Build: PASS
+  - Lint: N/A
+  - Tests: N/A
+  - Full output: `docs/build-log/PHASE_4/step-4.4-post.txt`
+- **New failures introduced:** none
+- **Pre-existing failures (not fixed):** none
+- **Acceptance Criteria:**
+  - [ ] `GET /api/posts?collection_id=<id>` filters posts by that collection — MET — `eq(schema.posts.collectionId, collection_id)` pushed into conditions when param present
+  - [ ] `POST /api/posts` with `collection_id` in body saves and returns it — MET — destructured from body, written as `collectionId: collection_id || null`, returned as `collection_id`
+  - [ ] `PUT /api/posts/[id]` with `collection_id` updates it; without it, preserves existing value — MET — `collection_id !== undefined ? (collection_id || null) : oldPost.collectionId` guard applied
+  - [ ] Existing article create/update (no `collection_id`) is unchanged (collection_id stays null) — MET — `undefined` path falls back to `oldPost.collectionId`; POST uses `collection_id || null` so undefined becomes null (new posts)
+  - [ ] `pnpm --filter web type-check` passes — MET — exit code 0, no diagnostics
+- **Deviations:** none

@@ -1,0 +1,13 @@
+--- type-check ---
+$ tsc --noEmit
+(no output, exit 0)
+
+--- lint ---
+$ eslint .
+Oops! Something went wrong! :(
+ESLint: 9.39.1
+ESLint couldn't find an eslint.config.(js|mjs|cjs) file.
+From ESLint v9.0.0, the default configuration file is now eslint.config.js.
+Exit status 2
+
+BASELINE: type-check PASS, lint FAIL (pre-existing — no eslint.config.js)

@@ -1,0 +1,29 @@
+## Implementation Summary
+
+- **Step:** Phase 3, Step 3 — "Collections + reviews APIs (novel-works)"
+- **Files modified:**
+  - `apps/web/lib/cms-api.ts` — appended `CollectionItem`, `CollectionReview` interfaces, `transformCollection` helper, and 6 typed methods: `fetchCollections`, `createCollection`, `updateCollection`, `deleteCollection`, `fetchCollectionReviews`, `submitReview`
+- **Files created:**
+  - `apps/web/app/api/collections/route.ts` — `GET` (list with `chapterCount`/`views`/`rating`/`reviewsCount` via SQL aggregates, optional `?type=` filter), `POST` (auth-protected; validates `typeKey` against `content_types.has_collections`)
+  - `apps/web/app/api/collections/[id]/route.ts` — `GET` (collection + sorted published chapters), `PUT` (auth-protected), `DELETE` (auth-protected; soft-delete only via `deletedAt`)
+  - `apps/web/app/api/collections/[id]/reviews/route.ts` — `GET` (newest-first; no auth), `POST` (public; clamps rating 1–5; rejects empty content)
+- **Baseline state:**
+  - Build: N/A (not run)
+  - Lint: FAIL (pre-existing — no eslint.config.js)
+  - Tests: N/A
+  - Full output: `docs/build-log/PHASE_3/step-3.3-baseline.txt`
+- **Post-implementation state:**
+  - Build: N/A (not run)
+  - Lint: FAIL (same pre-existing failure)
+  - Tests: N/A
+  - Full output: `docs/build-log/PHASE_3/step-3.3-post.txt`
+- **New failures introduced:** none
+- **Pre-existing failures (not fixed):** `pnpm --filter web lint` fails — no `eslint.config.js` found in `apps/web` (ESLint v9 requires flat config; the project has no config file at all)
+- **Acceptance Criteria:**
+  - [x] `GET /api/collections?type=novels` returns works with `chapterCount`, `rating`, `reviewsCount`, `views` (returns `[]` if no rows — verified by empty-list fast-path) — MET — implemented with SQL aggregates via `inArray` groupBy queries; returns `[]` immediately if `list.length === 0`
+  - [x] `GET /api/collections/[id]` returns `{ collection, chapters }` with ordered published chapters — MET — chapters sorted by `meta.chapterNumber` ascending in JS with `Infinity` fallback for missing values
+  - [x] `POST /api/collections/[id]/reviews` persists a review — MET — inserts into `schema.reviews`, returns 201 with created row
+  - [x] Auth-protected routes return 401 without a cookie; review submit and collection list work without auth — MET — `requireAuth(req)` guards POST/PUT/DELETE on collections; reviews POST has no auth check
+  - [x] `pnpm --filter web type-check` passes — MET — `tsc --noEmit` exits 0
+  - [ ] `pnpm --filter web lint` passes — NOT MET — pre-existing failure (no `eslint.config.js`); identical before and after this step
+- **Deviations:** none
