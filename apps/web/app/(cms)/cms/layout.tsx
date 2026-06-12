@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   },
 };
 
+// The CMS is fully auth-gated and never statically cached. Forcing the whole
+// segment dynamic prevents static-prerender bailouts from client hooks like
+// useSearchParams() (used in the sidebar + several CMS pages).
+export const dynamic = 'force-dynamic';
+
 export default function CmsLayout({
   children,
 }: {
