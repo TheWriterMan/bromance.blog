@@ -7,7 +7,6 @@ import {
   getRelatedPosts,
   getCategories,
   getAuthor,
-  getSiteSettings,
 } from '@/lib/blog-data';
 import { renderPostContent } from '@/lib/tiptap-html';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
@@ -16,6 +15,7 @@ import PostCard from '@/components/blog/post-card';
 import PostInteractions from '@/components/blog/post-interactions';
 import CommentsSection from '@/components/blog/comments-section';
 import ViewCounter from '@/components/blog/view-counter';
+import { SITE_CONFIG } from '@/lib/site-config';
 
 export const revalidate = 300;
 
@@ -56,15 +56,15 @@ export default async function ArticlePage({ params }: PageProps) {
   const post = await getArticleBySlug(slug);
   if (!post) notFound();
 
-  const [related, categories, author, settings] = await Promise.all([
+  const [related, categories, author] = await Promise.all([
     getRelatedPosts(post, 3),
     getCategories(),
     getAuthor(),
-    getSiteSettings(),
   ]);
 
   const html = renderPostContent(post.content);
   const sidebarCategories = categories.slice(0, 5);
+  const kofiLink = SITE_CONFIG.kofiLink;
 
   return (
     <article className="max-w-7xl mx-auto w-full px-6 overflow-hidden">
@@ -134,16 +134,16 @@ export default async function ArticlePage({ params }: PageProps) {
             dangerouslySetInnerHTML={{ __html: html }}
           />
 
-          {settings.kofiLink && (
+          {kofiLink && (
             <div className="my-16 p-8 border border-[var(--color-primary)]/20 flex flex-col sm:flex-row items-center gap-6 justify-between bg-[var(--color-primary)]/5">
               <div>
                 <h3 className="text-2xl font-black mb-2 text-[var(--color-primary)]">Enjoying the content?</h3>
                 <p className="text-sm font-medium opacity-80 text-[var(--color-primary)]">
-                  Support {author.displayName} by buying a coffee.
+                  Support {SITE_CONFIG.authorName} by buying a coffee.
                 </p>
               </div>
               <a
-                href={settings.kofiLink}
+                href={kofiLink}
                 target="_blank"
                 rel="noreferrer"
                 className="whitespace-nowrap flex items-center gap-2 px-6 py-3 font-bold text-lg border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-bg)] transition-colors duration-300"

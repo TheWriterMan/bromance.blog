@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BookOpen, Coffee } from 'lucide-react';
-import { getNovelChapters, getSiteSettings } from '@/lib/blog-data';
+import { getNovelChapters } from '@/lib/blog-data';
 import type { BlogPost } from '@/lib/blog-data';
 import { getNovelMeta } from '@/lib/novels-meta';
 import { getCloudinaryUrl, formatDate } from '@/lib/utils';
+import { SITE_CONFIG } from '@/lib/site-config';
 
 export const revalidate = 300;
 
@@ -33,10 +34,7 @@ function groupByNovel(chapters: BlogPost[]): NovelGroup[] {
 }
 
 export default async function NovelsPage() {
-  const [chapters, settings] = await Promise.all([
-    getNovelChapters(),
-    getSiteSettings(),
-  ]);
+  const chapters = await getNovelChapters();
   const novels = groupByNovel(chapters);
 
   return (
@@ -143,7 +141,7 @@ export default async function NovelsPage() {
       )}
 
       {/* Support section */}
-      {settings.kofiLink && (
+      {SITE_CONFIG.kofiLink && (
         <div className="mt-16 space-y-6">
           {/* Support Goal */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -170,7 +168,7 @@ export default async function NovelsPage() {
               </p>
             </div>
             <a
-              href={settings.kofiLink}
+              href={SITE_CONFIG.kofiLink}
               target="_blank"
               rel="noreferrer"
               className="whitespace-nowrap flex items-center gap-2 px-6 py-3 font-bold text-lg border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-bg)] transition-colors duration-300 rounded"

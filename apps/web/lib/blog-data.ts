@@ -62,8 +62,6 @@ export interface SiteSettings {
   description: string;
   copyright: string;
   siteUrl: string;
-  kofiLink: string;
-  contactEmail: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -173,8 +171,6 @@ const SETTINGS_DEFAULTS: SiteSettings = {
   description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
   copyright: `© ${new Date().getFullYear()} Bromance. All rights reserved.`,
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog',
-  kofiLink: '',
-  contactEmail: '',
 };
 
 export async function getSiteSettings(): Promise<SiteSettings> {
@@ -188,8 +184,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       description: map.site_description || SETTINGS_DEFAULTS.description,
       copyright: map.copyright || SETTINGS_DEFAULTS.copyright,
       siteUrl: map.site_url || SETTINGS_DEFAULTS.siteUrl,
-      kofiLink: map.kofi_link || SETTINGS_DEFAULTS.kofiLink,
-      contactEmail: map.contact_email || SETTINGS_DEFAULTS.contactEmail,
     };
   } catch {
     return SETTINGS_DEFAULTS;

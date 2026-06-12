@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Coffee, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getNovelBySlug, getNovelChapters, getSiteSettings } from '@/lib/blog-data';
+import { getNovelBySlug, getNovelChapters } from '@/lib/blog-data';
 import { getNovelMeta } from '@/lib/novels-meta';
 import { renderPostContent } from '@/lib/tiptap-html';
 import { formatDate } from '@/lib/utils';
 import ViewCounter from '@/components/blog/view-counter';
+import { SITE_CONFIG } from '@/lib/site-config';
 
 export const revalidate = 300;
 
@@ -28,10 +29,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function NovelChapterPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const [chapter, allChapters, settings] = await Promise.all([
+  const [chapter, allChapters] = await Promise.all([
     getNovelBySlug(slug),
     getNovelChapters(),
-    getSiteSettings(),
   ]);
 
   if (!chapter) notFound();
@@ -78,7 +78,7 @@ export default async function NovelChapterPage({ params }: PageProps) {
       />
 
       {/* Ko-fi support block */}
-      {settings.kofiLink && (
+      {SITE_CONFIG.kofiLink && (
         <div className="my-16 p-8 border border-[var(--color-primary)]/20 flex flex-col sm:flex-row items-center gap-6 justify-between bg-[var(--color-primary)]/5">
           <div>
             <h3 className="text-xl font-black mb-1 text-[var(--color-primary)]">Enjoying the story?</h3>
@@ -87,7 +87,7 @@ export default async function NovelChapterPage({ params }: PageProps) {
             </p>
           </div>
           <a
-            href={settings.kofiLink}
+            href={SITE_CONFIG.kofiLink}
             target="_blank"
             rel="noreferrer"
             className="whitespace-nowrap flex items-center gap-2 px-6 py-3 font-bold border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-bg)] transition-colors duration-300"
