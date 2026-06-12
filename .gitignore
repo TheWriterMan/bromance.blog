@@ -9,3 +9,6 @@ credentials.md
 package-lock.json
 .kiro/steering/git-identity.md
 .vercel
+
+# Local verification log (scripts/verify.ps1)
+.verify.log

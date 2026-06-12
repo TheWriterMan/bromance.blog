@@ -80,7 +80,6 @@ export async function PUT(
       url_prefix: ct.urlPrefix,
       description: ct.description,
       icon: ct.icon,
-      has_collections: ct.hasCollections,
       sort_order: ct.sortOrder,
     });
   } catch (error) {

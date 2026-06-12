@@ -15,7 +15,5 @@ export type {
   Setting,
   Backup,
   ContentType,
-  Collection,
-  Review,
   Schema,
 } from './types';

@@ -40,24 +40,18 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   )
 }
 
-const typeConfig: Record<PostType, { label: string; className: string }> = {
+const typeConfig: Record<string, { label: string; className: string }> = {
   article: {
     label: 'Article',
     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   },
-  tutorial: {
-    label: 'Tutorial',
+  novels: {
+    label: 'Novel',
     className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800',
   },
-  review: {
-    label: 'Review',
-    className: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400 border-pink-200 dark:border-pink-800',
-  },
-  opinion: {
-    label: 'Opinion',
-    className: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 border-teal-200 dark:border-teal-800',
-  },
 }
+
+const FALLBACK_TYPE_CLASS = 'bg-secondary text-muted-foreground border-border'
 
 interface TypeBadgeProps {
   type: PostType
@@ -65,7 +59,12 @@ interface TypeBadgeProps {
 }
 
 export function TypeBadge({ type, className }: TypeBadgeProps) {
-  const config = typeConfig[type]
+  // Types are data-driven (content_types table), so any unknown key must render
+  // gracefully instead of crashing on an undefined config.
+  const config = typeConfig[type] ?? {
+    label: type ? String(type) : 'Post',
+    className: FALLBACK_TYPE_CLASS,
+  }
   return (
     <Badge
       variant="outline"

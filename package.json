@@ -8,6 +8,7 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1",
     "clean": "turbo run clean"
   },
   "devDependencies": {

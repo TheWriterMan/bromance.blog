@@ -36,12 +36,6 @@ export async function GET(req: NextRequest) {
       conditions.push(eq(schema.posts.type, type));
     }
 
-    // Filter by collection
-    const collection_id = searchParams.get('collection_id');
-    if (collection_id) {
-      conditions.push(eq(schema.posts.collectionId, collection_id));
-    }
-
     // Filter by Category
     if (categoryId) {
       conditions.push(eq(schema.posts.categoryId, categoryId));
@@ -102,8 +96,6 @@ export async function GET(req: NextRequest) {
         discussionOpen: schema.posts.discussionOpen,
         type: schema.posts.type,
         meta: schema.posts.meta,
-        // Chapter meta keys: chapterNumber (number), locked (boolean)
-        collectionId: schema.posts.collectionId,
         deletedAt: schema.posts.deletedAt,
         content: excludeContent ? schema.posts.summary : schema.posts.content,
       })
@@ -167,7 +159,6 @@ export async function GET(req: NextRequest) {
       discussion_open: p.discussionOpen,
       type: p.type,
       meta: p.meta,
-      collection_id: p.collectionId ?? null,
       deleted_at: p.deletedAt?.toISOString() ?? null,
       views: p.views,
     }));
@@ -243,7 +234,6 @@ export async function POST(req: NextRequest) {
       discussion_open,
       type,
       meta,
-      collection_id,
       tagIds, 
       published_at 
     } = data;
@@ -306,7 +296,6 @@ export async function POST(req: NextRequest) {
       discussionOpen: discussion_open ?? true,
       type: type || 'article',
       meta: meta || {},
-      collectionId: collection_id || null,
       views: 0,
     };
 
@@ -342,7 +331,6 @@ export async function POST(req: NextRequest) {
       discussion_open: newPost.discussionOpen,
       type: newPost.type,
       meta: newPost.meta,
-      collection_id: newPost.collectionId ?? null,
       views: newPost.views,
       category: matchedCategory,
       tags: matchedTags

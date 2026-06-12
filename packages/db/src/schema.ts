@@ -54,13 +54,11 @@ export const posts = pgTable("posts", {
   discussionOpen: boolean("discussion_open").default(true).notNull(),
   type: varchar("type", { length: 50 }).default("article").notNull(),
   meta: jsonb("meta").default("{}").notNull(),
-  collectionId: varchar("collection_id", { length: 50 }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (table) => [
   index("idx_posts_category_id").on(table.categoryId),
   index("idx_posts_status").on(table.status),
   index("idx_posts_type").on(table.type),
-  index("idx_posts_collection_id").on(table.collectionId),
 ]);
 
 // ─── Post Tags (junction) ────────────────────────────────────────────────────
@@ -176,40 +174,7 @@ export const contentTypes = pgTable("content_types", {
   urlPrefix: varchar("url_prefix", { length: 50 }).notNull().unique(),
   description: text("description").notNull().default(""),
   icon: varchar("icon", { length: 50 }),
-  hasCollections: boolean("has_collections").default(false).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-// ─── Collections (novel-works; generic to any type) ───────────────────────────
-
-export const collections = pgTable("collections", {
-  id: varchar("id", { length: 50 }).primaryKey(),
-  typeKey: varchar("type_key", { length: 50 }).notNull(),
-  name: text("name").notNull(),
-  slug: varchar("slug", { length: 150 }).notNull().unique(),
-  description: text("description").notNull().default(""),
-  coverImage: text("cover_image").notNull().default(""),
-  status: varchar("status", { length: 30 }).notNull().default("ongoing"),
-  sortOrder: integer("sort_order").default(0).notNull(),
-  metadata: jsonb("metadata").default("{}").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-}, (table) => [
-  index("idx_collections_type_key").on(table.typeKey),
-]);
-
-// ─── Reviews (keyed to collections) ──────────────────────────────────────────
-
-export const reviews = pgTable("reviews", {
-  id: varchar("id", { length: 50 }).primaryKey(),
-  collectionId: varchar("collection_id", { length: 50 }).notNull(),
-  authorName: text("author_name"),
-  rating: integer("rating").default(5).notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  index("idx_reviews_collection_id").on(table.collectionId),
-]);

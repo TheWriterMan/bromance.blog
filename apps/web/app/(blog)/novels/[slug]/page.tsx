@@ -2,91 +2,66 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Coffee, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getChapter, getCollectionBySlug, getSiteSettings } from '@/lib/blog-data';
+import { getNovelBySlug, getNovelChapters, getSiteSettings } from '@/lib/blog-data';
+import { getNovelMeta } from '@/lib/novels-meta';
 import { renderPostContent } from '@/lib/tiptap-html';
 import { formatDate } from '@/lib/utils';
+import ViewCounter from '@/components/blog/view-counter';
 
 export const revalidate = 300;
 
 interface PageProps {
-  params: Promise<{ workSlug: string; chapterSlug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { workSlug, chapterSlug } = await params;
-  const result = await getChapter(workSlug, chapterSlug);
-  if (!result) return { title: 'Chapter not found' };
+  const { slug } = await params;
+  const chapter = await getNovelBySlug(slug);
+  if (!chapter) return { title: 'Chapter not found' };
   return {
-    title: result.chapter.title,
-    robots: { index: true, follow: true },
+    title: chapter.metaTitle || chapter.title,
+    description: chapter.metaDescription || chapter.summary,
+    robots: chapter.noindex ? { index: false, follow: false } : undefined,
   };
 }
 
-export default async function ChapterPage({ params }: PageProps) {
-  const { workSlug, chapterSlug } = await params;
+export default async function NovelChapterPage({ params }: PageProps) {
+  const { slug } = await params;
 
-  const [chapterResult, workResult, settings] = await Promise.all([
-    getChapter(workSlug, chapterSlug),
-    getCollectionBySlug(workSlug),
+  const [chapter, allChapters, settings] = await Promise.all([
+    getNovelBySlug(slug),
+    getNovelChapters(),
     getSiteSettings(),
   ]);
 
-  if (!chapterResult) notFound();
+  if (!chapter) notFound();
 
-  const { chapter, prev, next } = chapterResult;
-  const workName = workResult?.work.name ?? workSlug;
+  // Determine the novel (first tag) and compute prev/next within that group.
+  const novelTag = chapter.tags[0];
+  const novelMeta = novelTag ? getNovelMeta(novelTag.slug, novelTag.name) : null;
 
-  // Locked chapter — show Ko-fi paywall
-  if (chapter.locked) {
-    return (
-      <div className="max-w-2xl mx-auto px-6 py-24 text-center">
-        <Link
-          href={`/novels/${workSlug}`}
-          className="text-sm font-semibold text-[var(--color-primary)]/60 hover:text-[var(--color-primary)] transition-colors mb-8 inline-flex items-center gap-1"
-        >
-          ← {workName}
-        </Link>
-        <h1 className="text-3xl font-extrabold text-[var(--color-primary)] mt-8 mb-4">
-          {chapter.title}
-        </h1>
-        <div className="my-12 p-8 border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5">
-          <h2 className="text-xl font-black mb-3 text-[var(--color-primary)]">Premium Chapter</h2>
-          <p className="text-sm text-[var(--color-primary)]/70 mb-6">
-            This chapter is locked. Support the translator on Ko-fi to unlock it.
-          </p>
-          {settings.kofiLink && (
-            <a
-              href={settings.kofiLink}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 font-bold border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-bg)] transition-colors duration-300"
-            >
-              <Coffee className="w-5 h-5" /> Unlock on Ko-fi
-            </a>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const siblings = allChapters
+    .filter((c) => (c.tags[0]?.slug ?? 'other') === (novelTag?.slug ?? 'other'))
+    .sort((a, b) => (a.publishedAt ?? '').localeCompare(b.publishedAt ?? ''));
+  const idx = siblings.findIndex((c) => c.id === chapter.id);
+  const prev = idx > 0 ? siblings[idx - 1] : null;
+  const next = idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null;
 
   const html = renderPostContent(chapter.content);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
-      {/* Breadcrumb */}
+      <ViewCounter postId={chapter.id} />
+
+      {/* Breadcrumb to the novel library */}
       <Link
-        href={`/novels/${workSlug}`}
+        href="/novels"
         className="text-sm font-semibold text-[var(--color-primary)]/60 hover:text-[var(--color-primary)] transition-colors mb-8 inline-flex items-center gap-1"
       >
-        ← {workName}
+        ← {novelMeta?.title ?? 'Novels'}
       </Link>
 
       <header className="mt-6 mb-10">
-        {chapter.chapterNumber > 0 && (
-          <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]/50 mb-2">
-            Chapter {chapter.chapterNumber}
-          </p>
-        )}
         <h1 className="text-3xl md:text-4xl font-extrabold text-[var(--color-primary)] leading-tight">
           {chapter.title}
         </h1>
@@ -97,9 +72,6 @@ export default async function ChapterPage({ params }: PageProps) {
         )}
       </header>
 
-      {/* TODO: font/theme controls (interactive reader refactor — Step 10) */}
-
-      {/* Chapter content */}
       <div
         className="prose prose-lg max-w-none text-[var(--color-primary)] prose-headings:text-[var(--color-primary)] prose-p:text-[var(--color-primary)] prose-strong:text-[var(--color-primary)] prose-a:text-[var(--color-primary)]"
         dangerouslySetInnerHTML={{ __html: html }}
@@ -129,7 +101,7 @@ export default async function ChapterPage({ params }: PageProps) {
       <nav className="flex items-center justify-between mt-8 pt-8 border-t border-[var(--color-primary)]/10">
         {prev ? (
           <Link
-            href={`/novels/${workSlug}/${prev}`}
+            href={`/novels/${prev.slug}`}
             className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] hover:opacity-70 transition-opacity"
           >
             <ChevronLeft className="w-4 h-4" /> Previous
@@ -139,7 +111,7 @@ export default async function ChapterPage({ params }: PageProps) {
         )}
         {next ? (
           <Link
-            href={`/novels/${workSlug}/${next}`}
+            href={`/novels/${next.slug}`}
             className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] hover:opacity-70 transition-opacity"
           >
             Next <ChevronRight className="w-4 h-4" />

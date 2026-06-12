@@ -24,7 +24,6 @@ function toRow(ct: typeof schema.contentTypes.$inferSelect) {
     url_prefix: ct.urlPrefix,
     description: ct.description,
     icon: ct.icon,
-    has_collections: ct.hasCollections,
     sort_order: ct.sortOrder,
   };
 }
@@ -47,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, url_prefix, description, icon, has_collections, sort_order } = body;
+    const { name, url_prefix, description, icon, sort_order } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -91,7 +90,6 @@ export async function POST(req: NextRequest) {
       urlPrefix: prefix,
       description: description || '',
       icon: icon || null,
-      hasCollections: has_collections ?? false,
       sortOrder: sort_order ?? 0,
     });
 

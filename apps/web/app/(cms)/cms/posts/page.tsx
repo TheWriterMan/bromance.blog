@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { PlusCircle, Search, Trash2, ArrowLeft } from 'lucide-react'
+import { PlusCircle, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -36,10 +36,8 @@ function PostsPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const typeKey = searchParams.get('type') || 'article'
-  const collectionId = searchParams.get('collection')
 
   const [typeName, setTypeName] = useState<string>('')
-  const [collectionName, setCollectionName] = useState<string>('')
   const [tab, setTab] = useState<TabValue>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -61,14 +59,8 @@ function PostsPageInner() {
   // Fetch posts + counts
   useEffect(() => {
     let cancelled = false
-    const params: Parameters<typeof fetchPosts>[0] = {
-      excludeContent: true,
-      type: typeKey,
-    }
-    if (collectionId) params.collectionId = collectionId
-
     Promise.all([
-      fetchPosts(params),
+      fetchPosts({ excludeContent: true, type: typeKey }),
       fetchPostCounts(),
     ])
       .then(([postsData, countsData]) => {
@@ -80,7 +72,7 @@ function PostsPageInner() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [typeKey, collectionId])
+  }, [typeKey])
 
   const filtered = useMemo(() => {
     let result = posts
@@ -110,33 +102,19 @@ function PostsPageInner() {
     setCounts(prev => ({ ...prev, all: prev.all - 1 }))
   }
 
-  const newPostHref = collectionId
-    ? `/cms/posts/new?type=${typeKey}&collection=${collectionId}`
-    : `/cms/posts/new?type=${typeKey}`
-
-  const heading = collectionId && collectionName
-    ? `Chapters of ${collectionName}`
-    : typeName || 'Posts'
+  const newPostHref = `/cms/posts/new?type=${typeKey}`
 
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader
-        title={heading}
+        title={typeName || 'Posts'}
         description={`${counts.all} total`}
         actions={
           <div className="flex items-center gap-2">
-            {collectionId && (
-              <Link href={`/cms/collections?type=${typeKey}`}>
-                <Button variant="outline" size="sm" className="min-h-[44px] gap-2">
-                  <ArrowLeft className="size-4" />
-                  Back to Works
-                </Button>
-              </Link>
-            )}
             <Link href={newPostHref}>
               <Button size="sm" className="min-h-[44px] gap-2">
                 <PlusCircle className="size-4" />
-                {collectionId ? 'Add Chapter' : `New ${typeName}`}
+                New {typeName}
               </Button>
             </Link>
           </div>

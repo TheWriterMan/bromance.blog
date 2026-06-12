@@ -21,6 +21,7 @@ import {
   Library,
   type LucideProps,
 } from 'lucide-react'
+// Library is retained in ICON_MAP for content-type icons
 import {
   Sidebar,
   SidebarContent,
@@ -133,10 +134,6 @@ export function CmsSidebar() {
     return pathname.startsWith(href)
   }
 
-  function isCollectionsActive(typeKey: string) {
-    return pathname.startsWith('/cms/collections') && searchParams.get('type') === typeKey
-  }
-
   const initials = author.displayName
     .split(' ')
     .map(w => w[0])
@@ -181,33 +178,13 @@ export function CmsSidebar() {
                 const postsHref = `/cms/posts?type=${ct.key}`
                 const active = isActive('/cms/posts', ct.key)
                 return (
-                  <div key={ct.id}>
-                    <NavItem
-                      href={postsHref}
-                      label={ct.name}
-                      icon={Icon}
-                      isActive={active}
-                    />
-                    {ct.hasCollections && (
-                      <SidebarMenuItem>
-                        <Link href={`/cms/collections?type=${ct.key}`}>
-                          <SidebarMenuButton
-                            isActive={isCollectionsActive(ct.key)}
-                            className={cn(
-                              'min-h-[40px] rounded-lg transition-colors ml-4 text-xs',
-                              isCollectionsActive(ct.key)
-                                ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90'
-                                : 'text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent'
-                            )}
-                            tooltip={`${ct.name} Works`}
-                          >
-                            <Library className="size-3.5" />
-                            <span>→ {ct.name} Works</span>
-                          </SidebarMenuButton>
-                        </Link>
-                      </SidebarMenuItem>
-                    )}
-                  </div>
+                  <NavItem
+                    key={ct.id}
+                    href={postsHref}
+                    label={ct.name}
+                    icon={Icon}
+                    isActive={active}
+                  />
                 )
               })}
 

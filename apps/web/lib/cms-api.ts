@@ -227,7 +227,6 @@ function transformPost(raw: Record<string, any>): Post {
 export interface FetchPostsParams {
   status?: string;
   categoryId?: string;
-  collectionId?: string;
   search?: string;
   type?: string;
   tag?: string;
@@ -241,7 +240,6 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<PostLis
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
   if (params.categoryId) query.set('category_id', params.categoryId);
-  if (params.collectionId) query.set('collection_id', params.collectionId);
   if (params.search) query.set('search', params.search);
   if (params.type) query.set('type', params.type);
   if (params.tag) query.set('tag', params.tag);
@@ -558,7 +556,6 @@ export interface ContentType {
   urlPrefix: string;
   description: string;
   icon: string | null;
-  hasCollections: boolean;
   sortOrder: number;
 }
 
@@ -570,7 +567,6 @@ function transformContentType(raw: Record<string, any>): ContentType {
     urlPrefix: raw.url_prefix,
     description: raw.description || '',
     icon: raw.icon ?? null,
-    hasCollections: raw.has_collections ?? false,
     sortOrder: raw.sort_order ?? 0,
   };
 }
@@ -581,7 +577,7 @@ export async function fetchContentTypes(): Promise<ContentType[]> {
 }
 
 export async function createContentType(
-  data: { name: string; url_prefix?: string; description?: string; icon?: string; has_collections?: boolean; sort_order?: number }
+  data: { name: string; url_prefix?: string; description?: string; icon?: string; sort_order?: number }
 ): Promise<ContentType> {
   const raw = await apiFetch<any>('/api/content-types', {
     method: 'POST',
@@ -603,135 +599,4 @@ export async function updateContentType(
 
 export async function deleteContentType(id: string): Promise<void> {
   await apiFetch(`/api/content-types/${id}`, { method: 'DELETE' });
-}
-
-// ─── Collections ──────────────────────────────────────────────────────────────
-
-export interface CollectionItem {
-  id: string;
-  typeKey: string;
-  name: string;
-  slug: string;
-  description: string;
-  coverImage: string;
-  status: 'ongoing' | 'completed';
-  sortOrder: number;
-  metadata: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  chapterCount: number;
-  views: number;
-  rating: number;
-  reviewsCount: number;
-}
-
-export interface CollectionReview {
-  id: string;
-  collectionId: string;
-  authorName: string | null;
-  rating: number;
-  content: string;
-  createdAt: string;
-}
-
-function transformCollection(raw: Record<string, any>): CollectionItem {
-  return {
-    id: raw.id,
-    typeKey: raw.type_key,
-    name: raw.name,
-    slug: raw.slug,
-    description: raw.description || '',
-    coverImage: raw.cover_image || '',
-    status: raw.status || 'ongoing',
-    sortOrder: raw.sort_order ?? 0,
-    metadata: raw.metadata || {},
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
-    deletedAt: raw.deleted_at ?? null,
-    chapterCount: raw.chapterCount ?? 0,
-    views: raw.views ?? 0,
-    rating: raw.rating ?? 0,
-    reviewsCount: raw.reviewsCount ?? 0,
-  };
-}
-
-export async function fetchCollections(typeKey?: string): Promise<CollectionItem[]> {
-  const query = typeKey ? `?type=${encodeURIComponent(typeKey)}` : '';
-  const raw = await apiFetch<any[]>(`/api/collections${query}`);
-  return raw.map(transformCollection);
-}
-
-export async function createCollection(data: {
-  name: string;
-  typeKey: string;
-  slug?: string;
-  description?: string;
-  coverImage?: string;
-  status?: 'ongoing' | 'completed';
-  sortOrder?: number;
-  metadata?: Record<string, unknown>;
-}): Promise<CollectionItem> {
-  const raw = await apiFetch<any>('/api/collections', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return transformCollection(raw);
-}
-
-export async function updateCollection(
-  id: string,
-  data: Partial<{
-    name: string;
-    slug: string;
-    description: string;
-    coverImage: string;
-    status: 'ongoing' | 'completed';
-    sortOrder: number;
-    metadata: Record<string, unknown>;
-  }>
-): Promise<CollectionItem> {
-  const raw = await apiFetch<any>(`/api/collections/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
-  return transformCollection(raw);
-}
-
-export async function deleteCollection(id: string): Promise<void> {
-  await apiFetch(`/api/collections/${id}`, { method: 'DELETE' });
-}
-
-export async function fetchCollectionReviews(collectionId: string): Promise<CollectionReview[]> {
-  const raw = await apiFetch<any[]>(`/api/collections/${collectionId}/reviews`);
-  return raw.map(r => ({
-    id: r.id,
-    collectionId: r.collection_id,
-    authorName: r.author_name ?? null,
-    rating: r.rating,
-    content: r.content,
-    createdAt: r.created_at,
-  }));
-}
-
-export async function submitReview(
-  collectionId: string,
-  data: { authorName?: string; rating: number; content: string }
-): Promise<CollectionReview> {
-  const raw = await apiFetch<any>(`/api/collections/${collectionId}/reviews`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return {
-    id: raw.id,
-    collectionId: raw.collection_id,
-    authorName: raw.author_name ?? null,
-    rating: raw.rating,
-    content: raw.content,
-    createdAt: raw.created_at,
-  };
-}
-
-export async function deleteReview(collectionId: string, reviewId: string): Promise<void> {
-  await apiFetch(`/api/collections/${collectionId}/reviews/${reviewId}`, { method: 'DELETE' });
 }

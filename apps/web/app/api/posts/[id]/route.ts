@@ -81,7 +81,6 @@ export async function GET(
       discussion_open: post.discussionOpen,
       type: post.type,
       meta: post.meta,
-      collection_id: post.collectionId ?? null,
       views: post.views,
       category,
       tags: joinedTags
@@ -119,7 +118,6 @@ export async function PUT(
       discussion_open,
       type,
       meta,
-      collection_id,
       tagIds,
       published_at
     } = data;
@@ -234,7 +232,6 @@ export async function PUT(
       discussionOpen: discussion_open !== undefined ? discussion_open : oldPost.discussionOpen,
       type: type !== undefined ? type : oldPost.type,
       meta: meta !== undefined ? meta : oldPost.meta,
-      collectionId: collection_id !== undefined ? (collection_id || null) : oldPost.collectionId,
       updatedAt: now,
     };
 
@@ -290,7 +287,6 @@ export async function PUT(
       discussion_open: updatePayload.discussionOpen,
       type: updatePayload.type,
       meta: updatePayload.meta,
-      collection_id: updatePayload.collectionId ?? null,
       views: oldPost.views,
       category,
       tags: updatedTags

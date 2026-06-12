@@ -10,7 +10,7 @@
 
 import { db } from '@repo/db';
 import * as schema from '@repo/db';
-import { and, avg, count, desc, eq, inArray, isNull, or, ilike, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, ilike, sql } from 'drizzle-orm';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,40 +64,6 @@ export interface SiteSettings {
   siteUrl: string;
   kofiLink: string;
   contactEmail: string;
-}
-
-export interface NovelWork {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  coverImage: string;
-  status: string;
-  metadata: Record<string, unknown>;
-  chapterCount: number;
-  views: number;
-  rating: number;
-  reviewsCount: number;
-}
-
-export interface NovelChapter {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  chapterNumber: number;
-  locked: boolean;
-  publishedAt: string | null;
-  collectionId: string;
-}
-
-export interface NovelReview {
-  id: string;
-  collectionId: string;
-  authorName: string | null;
-  rating: number;
-  content: string;
-  createdAt: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -426,146 +392,39 @@ export async function getAuthorBySlug(slug: string): Promise<BlogAuthor | null> 
   return fallback.slug === slug ? fallback : null;
 }
 
-// ─── Collections (novels / generic works) ────────────────────────────────────
+// ─── Novels (type-scoped posts; chapters grouped by tag on the frontend) ──────
+//
+// Novels are foundationally identical to articles: they are posts with
+// type = 'novels'. There is NO works/collections/series backend. Chapters are
+// grouped into novels on the frontend using Category = "Novel" + Tag = novel name.
 
-export async function getCollections(typeKey = 'novels'): Promise<NovelWork[]> {
-  try {
-    const rows = await db
-      .select({
-        id: schema.collections.id,
-        name: schema.collections.name,
-        slug: schema.collections.slug,
-        description: schema.collections.description,
-        coverImage: schema.collections.coverImage,
-        status: schema.collections.status,
-        metadata: schema.collections.metadata,
-        chapterCount: sql<number>`cast(count(distinct ${schema.posts.id}) as integer)`,
-        views: sql<number>`cast(coalesce(sum(${schema.posts.views}), 0) as integer)`,
-        rating: sql<number>`coalesce(avg(${schema.reviews.rating}), 0)`,
-        reviewsCount: sql<number>`cast(count(distinct ${schema.reviews.id}) as integer)`,
-      })
-      .from(schema.collections)
-      .leftJoin(
-        schema.posts,
-        and(
-          eq(schema.posts.collectionId, schema.collections.id),
-          eq(schema.posts.status, 'published'),
-          isNull(schema.posts.deletedAt),
-        ),
-      )
-      .leftJoin(schema.reviews, eq(schema.reviews.collectionId, schema.collections.id))
-      .where(
-        and(
-          eq(schema.collections.typeKey, typeKey),
-          isNull(schema.collections.deletedAt),
-        ),
-      )
-      .groupBy(
-        schema.collections.id,
-        schema.collections.name,
-        schema.collections.slug,
-        schema.collections.description,
-        schema.collections.coverImage,
-        schema.collections.status,
-        schema.collections.metadata,
-      )
-      .orderBy(schema.collections.sortOrder);
+const novelFilter = () => and(publishedFilter(), eq(schema.posts.type, 'novels'));
 
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      slug: r.slug,
-      description: r.description,
-      coverImage: r.coverImage,
-      status: r.status,
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-      chapterCount: r.chapterCount,
-      views: r.views,
-      rating: Number(Number(r.rating).toFixed(1)),
-      reviewsCount: r.reviewsCount,
-    }));
-  } catch {
-    return [];
-  }
+/** All published novel chapters (posts of type 'novels'), newest first. */
+export async function getNovelChapters(): Promise<BlogPost[]> {
+  const rows = await db
+    .select()
+    .from(schema.posts)
+    .where(novelFilter())
+    .orderBy(desc(schema.posts.publishedAt));
+  return attachRelations(rows);
 }
 
-export async function getCollectionBySlug(
-  slug: string,
-): Promise<{ work: NovelWork; chapters: NovelChapter[] } | null> {
-  try {
-    const works = await getCollections('novels');
-    const work = works.find((w) => w.slug === slug) ?? null;
-    if (!work) return null;
-
-    const chapterRows = await db
-      .select()
-      .from(schema.posts)
-      .where(
-        and(
-          eq(schema.posts.collectionId, work.id),
-          eq(schema.posts.status, 'published'),
-          isNull(schema.posts.deletedAt),
-        ),
-      );
-
-    const chapters: NovelChapter[] = chapterRows
-      .map((r) => {
-        const meta = (r.meta as Record<string, unknown>) ?? {};
-        return {
-          id: r.id,
-          title: r.title,
-          slug: r.slug,
-          content: r.content,
-          chapterNumber: typeof meta.chapterNumber === 'number' ? meta.chapterNumber : 0,
-          locked: meta.locked === true,
-          publishedAt: r.publishedAt?.toISOString() ?? null,
-          collectionId: r.collectionId ?? work.id,
-        };
-      })
-      .sort((a, b) => a.chapterNumber - b.chapterNumber);
-
-    return { work, chapters };
-  } catch {
-    return null;
-  }
-}
-
-export async function getChapter(
-  workSlug: string,
-  chapterSlug: string,
-): Promise<{ chapter: NovelChapter; prev: string | null; next: string | null } | null> {
-  try {
-    const result = await getCollectionBySlug(workSlug);
-    if (!result) return null;
-    const { chapters } = result;
-    const idx = chapters.findIndex((c) => c.slug === chapterSlug);
-    if (idx === -1) return null;
-    return {
-      chapter: chapters[idx],
-      prev: idx > 0 ? chapters[idx - 1].slug : null,
-      next: idx < chapters.length - 1 ? chapters[idx + 1].slug : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export async function getCollectionReviews(collectionId: string): Promise<NovelReview[]> {
-  try {
-    const rows = await db
-      .select()
-      .from(schema.reviews)
-      .where(eq(schema.reviews.collectionId, collectionId))
-      .orderBy(desc(schema.reviews.createdAt));
-    return rows.map((r) => ({
-      id: r.id,
-      collectionId: r.collectionId,
-      authorName: r.authorName,
-      rating: r.rating,
-      content: r.content,
-      createdAt: r.createdAt.toISOString(),
-    }));
-  } catch {
-    return [];
-  }
+/** A single published novel chapter by slug. */
+export async function getNovelBySlug(slug: string): Promise<BlogPost | null> {
+  const [row] = await db
+    .select()
+    .from(schema.posts)
+    .where(
+      and(
+        eq(schema.posts.slug, slug),
+        eq(schema.posts.status, 'published'),
+        isNull(schema.posts.deletedAt),
+        eq(schema.posts.type, 'novels'),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const [enriched] = await attachRelations([row]);
+  return enriched;
 }
