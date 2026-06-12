@@ -10,7 +10,7 @@
 
 import { db } from '@repo/db';
 import * as schema from '@repo/db';
-import { and, desc, eq, inArray, isNull, or, ilike, sql } from 'drizzle-orm';
+import { and, avg, count, desc, eq, inArray, isNull, or, ilike, sql } from 'drizzle-orm';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,40 @@ export interface SiteSettings {
   siteUrl: string;
   kofiLink: string;
   contactEmail: string;
+}
+
+export interface NovelWork {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  coverImage: string;
+  status: string;
+  metadata: Record<string, unknown>;
+  chapterCount: number;
+  views: number;
+  rating: number;
+  reviewsCount: number;
+}
+
+export interface NovelChapter {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  chapterNumber: number;
+  locked: boolean;
+  publishedAt: string | null;
+  collectionId: string;
+}
+
+export interface NovelReview {
+  id: string;
+  collectionId: string;
+  authorName: string | null;
+  rating: number;
+  content: string;
+  createdAt: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -161,6 +195,10 @@ async function attachRelations(rows: PostRow[]): Promise<BlogPost[]> {
 const publishedFilter = () =>
   and(eq(schema.posts.status, 'published'), isNull(schema.posts.deletedAt));
 
+/** Article-only published filter — use this on every public listing surface. */
+const articleFilter = () =>
+  and(publishedFilter(), eq(schema.posts.type, 'article'));
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 const SETTINGS_DEFAULTS: SiteSettings = {
@@ -203,7 +241,7 @@ export async function getCategories(): Promise<BlogCategory[]> {
         count: sql<number>`cast(count(*) as integer)`,
       })
       .from(schema.posts)
-      .where(publishedFilter())
+      .where(articleFilter())
       .groupBy(schema.posts.categoryId),
   ]);
   const countMap = new Map(counts.map((c) => [c.categoryId, c.count]));
@@ -225,11 +263,11 @@ export async function getCategoryBySlug(slug: string): Promise<BlogCategory | nu
     .where(and(eq(schema.categories.slug, slug), isNull(schema.categories.deletedAt)))
     .limit(1);
   if (!cat) return null;
-  const [{ count }] = await db
+  const [{ count: postCount }] = await db
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(schema.posts)
-    .where(and(publishedFilter(), eq(schema.posts.categoryId, cat.id)));
-  return { id: cat.id, name: cat.name, slug: cat.slug, description: cat.description, postCount: count };
+    .where(and(articleFilter(), eq(schema.posts.categoryId, cat.id)));
+  return { id: cat.id, name: cat.name, slug: cat.slug, description: cat.description, postCount };
 }
 
 export async function getTagBySlug(slug: string): Promise<BlogTag | null> {
@@ -255,7 +293,7 @@ export async function getPublishedPosts(
   const { categoryId, categorySlug, tagSlug, search } = query;
   const limit = query.limit ?? 24;
   const page = query.page ?? 1;
-  const conditions = [publishedFilter()];
+  const conditions = [articleFilter()];
 
   if (categoryId) conditions.push(eq(schema.posts.categoryId, categoryId));
   if (categorySlug) {
@@ -302,6 +340,7 @@ export async function getPublishedPosts(
   return { posts: await attachRelations(rows), total: totalRows[0].count };
 }
 
+/** Type-agnostic slug lookup — used by the legacy resolver (Step 8). */
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   const [row] = await db
     .select()
@@ -313,8 +352,27 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   return enriched;
 }
 
+/** Article-scoped slug lookup — use for the /articles/[slug] page. */
+export async function getArticleBySlug(slug: string): Promise<BlogPost | null> {
+  const [row] = await db
+    .select()
+    .from(schema.posts)
+    .where(
+      and(
+        eq(schema.posts.slug, slug),
+        eq(schema.posts.status, 'published'),
+        isNull(schema.posts.deletedAt),
+        eq(schema.posts.type, 'article'),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const [enriched] = await attachRelations([row]);
+  return enriched;
+}
+
 export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPost[]> {
-  const conditions = [publishedFilter(), sql`${schema.posts.id} != ${post.id}`];
+  const conditions = [articleFilter(), sql`${schema.posts.id} != ${post.id}`];
   if (post.category) conditions.push(eq(schema.posts.categoryId, post.category.id));
   const rows = await db
     .select()
@@ -323,12 +381,12 @@ export async function getRelatedPosts(post: BlogPost, limit = 3): Promise<BlogPo
     .orderBy(desc(schema.posts.publishedAt))
     .limit(limit);
   if (rows.length >= limit || !post.category) return attachRelations(rows);
-  // Top up with recent posts from any category if the category is thin.
+  // Top up with recent articles from any category if the category is thin.
   const have = new Set(rows.map((r) => r.id).concat(post.id));
   const extra = await db
     .select()
     .from(schema.posts)
-    .where(publishedFilter())
+    .where(articleFilter())
     .orderBy(desc(schema.posts.publishedAt))
     .limit(limit + rows.length + 1);
   const merged = [...rows, ...extra.filter((e) => !have.has(e.id))].slice(0, limit);
@@ -339,7 +397,7 @@ export async function getAllPublishedSlugs(): Promise<{ slug: string; updatedAt:
   const rows = await db
     .select({ slug: schema.posts.slug, updatedAt: schema.posts.updatedAt })
     .from(schema.posts)
-    .where(publishedFilter());
+    .where(articleFilter());
   return rows;
 }
 
@@ -366,4 +424,148 @@ export async function getAuthorBySlug(slug: string): Promise<BlogAuthor | null> 
   }
   const fallback = await getAuthor();
   return fallback.slug === slug ? fallback : null;
+}
+
+// ─── Collections (novels / generic works) ────────────────────────────────────
+
+export async function getCollections(typeKey = 'novels'): Promise<NovelWork[]> {
+  try {
+    const rows = await db
+      .select({
+        id: schema.collections.id,
+        name: schema.collections.name,
+        slug: schema.collections.slug,
+        description: schema.collections.description,
+        coverImage: schema.collections.coverImage,
+        status: schema.collections.status,
+        metadata: schema.collections.metadata,
+        chapterCount: sql<number>`cast(count(distinct ${schema.posts.id}) as integer)`,
+        views: sql<number>`cast(coalesce(sum(${schema.posts.views}), 0) as integer)`,
+        rating: sql<number>`coalesce(avg(${schema.reviews.rating}), 0)`,
+        reviewsCount: sql<number>`cast(count(distinct ${schema.reviews.id}) as integer)`,
+      })
+      .from(schema.collections)
+      .leftJoin(
+        schema.posts,
+        and(
+          eq(schema.posts.collectionId, schema.collections.id),
+          eq(schema.posts.status, 'published'),
+          isNull(schema.posts.deletedAt),
+        ),
+      )
+      .leftJoin(schema.reviews, eq(schema.reviews.collectionId, schema.collections.id))
+      .where(
+        and(
+          eq(schema.collections.typeKey, typeKey),
+          isNull(schema.collections.deletedAt),
+        ),
+      )
+      .groupBy(
+        schema.collections.id,
+        schema.collections.name,
+        schema.collections.slug,
+        schema.collections.description,
+        schema.collections.coverImage,
+        schema.collections.status,
+        schema.collections.metadata,
+      )
+      .orderBy(schema.collections.sortOrder);
+
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      description: r.description,
+      coverImage: r.coverImage,
+      status: r.status,
+      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      chapterCount: r.chapterCount,
+      views: r.views,
+      rating: Number(Number(r.rating).toFixed(1)),
+      reviewsCount: r.reviewsCount,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getCollectionBySlug(
+  slug: string,
+): Promise<{ work: NovelWork; chapters: NovelChapter[] } | null> {
+  try {
+    const works = await getCollections('novels');
+    const work = works.find((w) => w.slug === slug) ?? null;
+    if (!work) return null;
+
+    const chapterRows = await db
+      .select()
+      .from(schema.posts)
+      .where(
+        and(
+          eq(schema.posts.collectionId, work.id),
+          eq(schema.posts.status, 'published'),
+          isNull(schema.posts.deletedAt),
+        ),
+      );
+
+    const chapters: NovelChapter[] = chapterRows
+      .map((r) => {
+        const meta = (r.meta as Record<string, unknown>) ?? {};
+        return {
+          id: r.id,
+          title: r.title,
+          slug: r.slug,
+          content: r.content,
+          chapterNumber: typeof meta.chapterNumber === 'number' ? meta.chapterNumber : 0,
+          locked: meta.locked === true,
+          publishedAt: r.publishedAt?.toISOString() ?? null,
+          collectionId: r.collectionId ?? work.id,
+        };
+      })
+      .sort((a, b) => a.chapterNumber - b.chapterNumber);
+
+    return { work, chapters };
+  } catch {
+    return null;
+  }
+}
+
+export async function getChapter(
+  workSlug: string,
+  chapterSlug: string,
+): Promise<{ chapter: NovelChapter; prev: string | null; next: string | null } | null> {
+  try {
+    const result = await getCollectionBySlug(workSlug);
+    if (!result) return null;
+    const { chapters } = result;
+    const idx = chapters.findIndex((c) => c.slug === chapterSlug);
+    if (idx === -1) return null;
+    return {
+      chapter: chapters[idx],
+      prev: idx > 0 ? chapters[idx - 1].slug : null,
+      next: idx < chapters.length - 1 ? chapters[idx + 1].slug : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getCollectionReviews(collectionId: string): Promise<NovelReview[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.reviews)
+      .where(eq(schema.reviews.collectionId, collectionId))
+      .orderBy(desc(schema.reviews.createdAt));
+    return rows.map((r) => ({
+      id: r.id,
+      collectionId: r.collectionId,
+      authorName: r.authorName,
+      rating: r.rating,
+      content: r.content,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch {
+    return [];
+  }
 }
