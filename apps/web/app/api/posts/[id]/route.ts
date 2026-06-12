@@ -171,7 +171,8 @@ export async function PUT(
       } else if (status === 'scheduled') {
         pubDate = published_at ? new Date(published_at) : oldPost.publishedAt || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
       } else {
-        pubDate = null;
+        // Draft: preserve any date the user already picked (for future scheduling)
+        pubDate = published_at ? new Date(published_at) : oldPost.publishedAt || null;
       }
     }
 
