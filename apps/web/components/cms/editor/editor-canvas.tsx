@@ -224,7 +224,7 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
       canonical_url: canonicalUrl,
       noindex,
       og_image: ogImage,
-      published_at: status === 'scheduled' && publishedAt
+      published_at: publishedAt
         ? new Date(publishedAt).toISOString()
         : status === 'published' ? new Date().toISOString() : null,
       type: postType,
@@ -495,9 +495,20 @@ export default function EditorCanvas({ postId }: EditorCanvasProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
+  // Track whether initial load has settled (skip dirty marking on first render)
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (!loading) {
+      // Give a tick for all state to settle after load
+      const t = setTimeout(() => { initialLoadDone.current = true; }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
+
   // Autosave — all statuses, debounced 5s server save
   useEffect(() => {
     if (loading) return;
+    if (!initialLoadDone.current) return; // skip the initial state hydration
     setIsDirty(true);
     const timer = setTimeout(() => {
       if (navigator.onLine) {

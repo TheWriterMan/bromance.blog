@@ -108,12 +108,12 @@ export default function DocumentHeader({
     <div className="space-y-4 mb-8">
       {/* Block 1: Cover Image */}
       <div
-        className="relative w-full rounded-lg overflow-hidden group"
+        className="relative w-full rounded-lg group"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
         {hasImage ? (
-          <div className="relative aspect-[21/9] w-full">
+          <div className="relative aspect-[21/9] w-full overflow-hidden rounded-lg">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getCloudinaryUrl(featuredImage)}
