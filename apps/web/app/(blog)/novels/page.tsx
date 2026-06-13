@@ -12,6 +12,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: 'Novels',
   description: 'Browse novels and their chapters.',
+  robots: { index: false, follow: false },
 };
 
 interface NovelGroup {

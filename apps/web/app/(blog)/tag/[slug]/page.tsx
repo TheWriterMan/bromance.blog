@@ -14,7 +14,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const tag = await getTagBySlug(slug);
   if (!tag) return { title: 'Tag not found' };
-  return { title: `#${tag.name}`, description: `Posts tagged ${tag.name}` };
+  return {
+    title: `#${tag.name} — Tagged Posts`,
+    description: `Browse all articles tagged with ${tag.name} on Bromance Blog.`,
+    openGraph: {
+      title: `#${tag.name} — Tagged Posts | Bromance Blog`,
+      description: `Browse all articles tagged with ${tag.name} on Bromance Blog.`,
+      type: 'website',
+      url: `https://bromance.blog/tag/${slug}`,
+    },
+    alternates: {
+      canonical: `https://bromance.blog/tag/${slug}`,
+    },
+  };
 }
 
 export default async function TagPage({ params }: PageProps) {

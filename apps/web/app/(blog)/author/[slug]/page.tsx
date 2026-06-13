@@ -15,7 +15,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const author = await getAuthorBySlug(slug);
   if (!author) return { title: 'Author not found' };
-  return { title: author.displayName, description: author.bio || `Posts by ${author.displayName}` };
+  return {
+    title: `${author.displayName} — Author`,
+    description: author.bio || `Articles and reviews by ${author.displayName} on Bromance Blog.`,
+    openGraph: {
+      title: `${author.displayName} — Author | Bromance Blog`,
+      description: author.bio || `Articles and reviews by ${author.displayName} on Bromance Blog.`,
+      type: 'profile',
+      url: `https://bromance.blog/author/${slug}`,
+    },
+    alternates: {
+      canonical: `https://bromance.blog/author/${slug}`,
+    },
+  };
 }
 
 export default async function AuthorPage({ params }: PageProps) {

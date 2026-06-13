@@ -25,32 +25,39 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://bromance.blog'),
   title: {
-    default: 'Bromance',
-    template: '%s | Bromance',
+    default: 'Bromance — Donghua, Drama, Manga & Novel Reviews',
+    template: '%s | Bromance Blog',
   },
-  description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
-  keywords: ['Donghua', 'Chinese Animation', 'Drama', 'Manga', 'Novel', 'Reviews', 'Recommendations'],
-  authors: [{ name: 'Amy97' }],
+  description: 'Your go-to hub for donghua, Chinese drama, manga, and novel reviews, recaps, rankings, and recommendations. Written by Amy97.',
+  keywords: ['Donghua', 'Chinese Animation', 'Drama', 'Manga', 'Novel', 'Reviews', 'Recommendations', 'Recaps', 'Rankings', 'BL', 'Bromance'],
+  authors: [{ name: 'Amy97', url: 'https://bromance.blog/author/amy97' }],
   creator: 'Amy97',
-  publisher: 'Bromance',
+  publisher: 'Bromance Blog',
+  alternates: {
+    canonical: 'https://bromance.blog',
+    types: {
+      'application/rss+xml': 'https://bromance.blog/feed.xml',
+    },
+  },
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
     apple: '/favicon.png',
   },
   openGraph: {
-    title: 'Bromance',
-    description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
+    title: 'Bromance — Donghua, Drama, Manga & Novel Reviews',
+    description: 'Your go-to hub for donghua, Chinese drama, manga, and novel reviews, recaps, rankings, and recommendations.',
     type: 'website',
     url: 'https://bromance.blog',
-    siteName: 'Bromance',
-    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Bromance' }],
+    siteName: 'Bromance Blog',
+    locale: 'en_US',
+    images: [{ url: '/hero-banner.jpg', width: 1200, height: 630, alt: 'Bromance Blog — Donghua, Drama, Manga & Novel Reviews' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bromance',
-    description: 'Donghua, drama, manga, and novel reviews, recaps, and recommendations.',
-    images: ['/logo.png'],
+    title: 'Bromance — Donghua, Drama, Manga & Novel Reviews',
+    description: 'Your go-to hub for donghua, Chinese drama, manga, and novel reviews, recaps, rankings, and recommendations.',
+    images: ['/hero-banner.jpg'],
   },
   robots: {
     index: true,
@@ -111,10 +118,38 @@ export default function RootLayout({
           {`
             {
               "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "Bromance",
-              "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}",
-              "logo": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/logo.png"
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "name": "Bromance Blog",
+                  "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}",
+                  "description": "Donghua, drama, manga, and novel reviews, recaps, rankings, and recommendations.",
+                  "publisher": {
+                    "@type": "Organization",
+                    "name": "Bromance Blog",
+                    "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}",
+                    "logo": {
+                      "@type": "ImageObject",
+                      "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/logo.png",
+                      "width": 512,
+                      "height": 512
+                    }
+                  },
+                  "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                      "@type": "EntryPoint",
+                      "urlTemplate": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                  }
+                },
+                {
+                  "@type": "Person",
+                  "name": "Amy97",
+                  "url": "${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/author/amy97"
+                }
+              ]
             }
           `}
         </Script>

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: '/cms/',
+      disallow: ['/cms/', '/novels/', '/my-work/'],
     },
     sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://bromance.blog'}/sitemap.xml`,
   };

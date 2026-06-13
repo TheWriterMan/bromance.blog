@@ -15,8 +15,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const category = await getCategoryBySlug(slug);
   if (!category) return { title: 'Category not found' };
   return {
-    title: category.name,
-    description: category.description || `Posts in ${category.name}`,
+    title: `${category.name} — Articles & Reviews`,
+    description: category.description || `Read the latest ${category.name} articles, reviews, and recommendations on Bromance Blog.`,
+    openGraph: {
+      title: `${category.name} — Articles & Reviews | Bromance Blog`,
+      description: category.description || `Read the latest ${category.name} articles, reviews, and recommendations on Bromance Blog.`,
+      type: 'website',
+      url: `https://bromance.blog/category/${slug}`,
+    },
+    alternates: {
+      canonical: `https://bromance.blog/category/${slug}`,
+    },
   };
 }
 

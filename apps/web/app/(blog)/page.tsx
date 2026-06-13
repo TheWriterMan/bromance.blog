@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronRight, BookOpen, Sparkles } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { getPublishedPosts, getAuthor, getSiteSettings, getCategories } from '@/lib/blog-data';
 import PostCard from '@/components/blog/post-card';
 
@@ -30,10 +30,10 @@ export default async function HomePage() {
           <h2 className="text-5xl md:text-8xl font-black tracking-tighter text-white">{settings.siteName}</h2>
           <p className="text-gray-200 font-medium text-lg md:text-xl mt-4 max-w-2xl">{settings.tagline}</p>
           <Link
-            href="/my-work"
+            href={topCategory ? `/category/${topCategory.slug}` : '/'}
             className="mt-8 px-8 py-3 bg-[#cc0000] text-white font-extrabold text-sm uppercase tracking-widest hover:bg-white hover:text-[#cc0000] transition-all duration-300 rounded shadow-md hover:scale-105 active:scale-95 flex items-center gap-2"
           >
-            <BookOpen className="w-4 h-4" /> Go to Novel Library
+            Start Reading
           </Link>
         </div>
       </section>
@@ -61,28 +61,7 @@ export default async function HomePage() {
               </section>
             )}
 
-            {/* My Work promo */}
-            <section className="my-16 bg-[#cc0000]/5 border-2 border-[#cc0000]/10 p-6 md:p-10 rounded-lg">
-              <div className="flex flex-col md:flex-row md:items-center gap-6 justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase text-[#cc0000] mb-2">
-                    <Sparkles className="w-4 h-4" /> Original Translations
-                  </div>
-                  <h3 className="text-3xl md:text-4xl font-extrabold text-[var(--color-primary)] tracking-tight leading-tight">
-                    Read Our Web Novels
-                  </h3>
-                  <p className="text-sm md:text-base opacity-80 text-[var(--color-primary)] mt-2 max-w-xl">
-                    A boutique translation and reading hub for Bromance, Famine Farming Rebirth, and Cultivation web novels.
-                  </p>
-                </div>
-                <Link
-                  href="/my-work"
-                  className="shrink-0 px-6 py-3 bg-[#cc0000] text-white font-extrabold text-xs uppercase tracking-widest rounded hover:bg-red-800 transition-colors flex items-center gap-2"
-                >
-                  <BookOpen className="w-4 h-4" /> Explore the Library
-                </Link>
-              </div>
-            </section>
+            {/* Novel promo section hidden for now */}
 
             {/* Latest editorial layout */}
             {feature && (

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Search, Coffee, BookOpen } from 'lucide-react';
+import { Menu, X, Search, Coffee } from 'lucide-react';
 import SearchOverlay from './search-overlay';
 
 export interface HeaderCategory {
@@ -24,7 +24,6 @@ export default function BlogHeader({ siteName, kofiLink, categories }: BlogHeade
   const [searchOpen, setSearchOpen] = useState(false);
 
   const isHome = pathname === '/';
-  const isMyWork = pathname?.startsWith('/my-work');
   const navLink = 'hover:opacity-70 transition-all uppercase tracking-wider';
   const active = 'underline underline-offset-8 decoration-2';
 
@@ -46,9 +45,7 @@ export default function BlogHeader({ siteName, kofiLink, categories }: BlogHeade
               <Link href="/" className={`${navLink} ${isHome ? active : ''}`}>
                 Blog
               </Link>
-              <Link href="/my-work" className={`${navLink} flex items-center gap-1.5 ${isMyWork ? active : ''}`}>
-                <BookOpen className="w-4 h-4" /> My Work
-              </Link>
+              {/* Novel section hidden for now */}
 
               <button
                 onClick={() => setSearchOpen(true)}
@@ -115,9 +112,7 @@ export default function BlogHeader({ siteName, kofiLink, categories }: BlogHeade
               <Link href="/" onClick={() => setMobileOpen(false)} className="hover:translate-x-2 transition-transform uppercase">
                 Home
               </Link>
-              <Link href="/my-work" onClick={() => setMobileOpen(false)} className="hover:translate-x-2 transition-transform flex items-center gap-3 text-[#cc0000]">
-                <BookOpen className="w-6 h-6" /> My Work
-              </Link>
+              {/* Novel section hidden for now */}
               <hr className="border-[var(--color-primary)]/10" />
               {categories.map((cat) => (
                 <Link

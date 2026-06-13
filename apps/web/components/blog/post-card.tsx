@@ -56,7 +56,7 @@ export default function PostCard({ post, authorName, variant = 'grid' }: PostCar
   if (variant === 'minimal') {
     return (
       <Link href={href} className="group flex flex-col gap-3">
-        <div className="overflow-hidden aspect-[4/3] w-full bg-[var(--color-primary)]/5">
+        <div className="overflow-hidden aspect-video w-full bg-[var(--color-primary)]/5">
           <img src={img} alt={post.title} className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
         </div>
         <h3 className="text-xl font-bold leading-tight mt-2 decoration-2 underline-offset-4 group-hover:underline text-[var(--color-primary)]">{post.title}</h3>
@@ -68,7 +68,7 @@ export default function PostCard({ post, authorName, variant = 'grid' }: PostCar
   // grid (default)
   return (
     <Link href={href} className="flex flex-col group">
-      <div className="overflow-hidden aspect-[4/3] w-full mb-4 bg-[var(--color-primary)]/5">
+      <div className="overflow-hidden aspect-video w-full mb-4 bg-[var(--color-primary)]/5">
         <img src={img} alt={post.title} className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
       </div>
       <h4 className="text-xl font-bold leading-tight mb-2 decoration-2 underline-offset-4 group-hover:underline text-[var(--color-primary)]">

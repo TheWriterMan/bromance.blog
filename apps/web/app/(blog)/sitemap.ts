@@ -4,24 +4,21 @@ import {
   getCategories,
   getAuthor,
   getSiteSettings,
-  getNovelChapters,
 } from '@/lib/blog-data';
 
 export const revalidate = 600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [slugs, categories, author, settings, novelChapters] = await Promise.all([
+  const [slugs, categories, author, settings] = await Promise.all([
     getAllPublishedSlugs(),
     getCategories(),
     getAuthor(),
     getSiteSettings(),
-    getNovelChapters(),
   ]);
   const base = settings.siteUrl.replace(/\/$/, '');
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${base}/novels`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${base}/author/${author.slug}`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
   ];
 
@@ -39,13 +36,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  // Novel chapters are plain posts served at /novels/<slug>.
-  const novelRoutes: MetadataRoute.Sitemap = novelChapters.map((ch) => ({
-    url: `${base}/novels/${ch.slug}`,
-    lastModified: ch.publishedAt ? new Date(ch.publishedAt) : new Date(),
-    changeFrequency: 'weekly',
-    priority: 0.6,
-  }));
-
-  return [...staticRoutes, ...postRoutes, ...categoryRoutes, ...novelRoutes];
+  return [...staticRoutes, ...postRoutes, ...categoryRoutes];
 }

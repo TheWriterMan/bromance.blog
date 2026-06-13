@@ -35,11 +35,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: post.metaTitle || post.title,
     description: post.metaDescription || post.summary,
     robots: post.noindex ? { index: false, follow: false } : undefined,
+    alternates: {
+      canonical: post.canonicalUrl || `https://bromance.blog/articles/${slug}`,
+    },
     openGraph: {
       title: post.metaTitle || post.title,
       description: post.metaDescription || post.summary,
       type: 'article',
       publishedTime: post.publishedAt || undefined,
+      url: `https://bromance.blog/articles/${slug}`,
+      siteName: 'Bromance Blog',
       images,
     },
     twitter: {
@@ -66,8 +71,56 @@ export default async function ArticlePage({ params }: PageProps) {
   const sidebarCategories = categories.slice(0, 5);
   const kofiLink = SITE_CONFIG.kofiLink;
 
+  // JSON-LD structured data for rich search results
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.metaDescription || post.summary,
+    image: post.featuredImage ? getCloudinaryUrl(post.featuredImage, 'featured') : undefined,
+    datePublished: post.publishedAt || undefined,
+    dateModified: post.publishedAt || undefined,
+    author: {
+      '@type': 'Person',
+      name: author.displayName,
+      url: `https://bromance.blog/author/${author.slug}`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Bromance Blog',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://bromance.blog/logo.png',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://bromance.blog/articles/${post.slug}`,
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://bromance.blog' },
+      ...(post.category
+        ? [{ '@type': 'ListItem', position: 2, name: post.category.name, item: `https://bromance.blog/category/${post.category.slug}` }]
+        : []),
+      { '@type': 'ListItem', position: post.category ? 3 : 2, name: post.title },
+    ],
+  };
+
   return (
     <article className="max-w-7xl mx-auto w-full px-6 overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <ViewCounter postId={post.id} />
 
       <div className="mt-8">
