@@ -27,10 +27,9 @@ function cleanContent(text: string): string {
 
 export async function POST(req: NextRequest) {
   // Auth check
-  const cookieHeader = req.headers.get('cookie') || '';
-  if (!cookieHeader.includes('cms_logged_in=true')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { requireAuth } = await import('@/lib/auth');
+  const denied = requireAuth(req);
+  if (denied) return denied;
 
   try {
     const allPosts = await db.select().from(schema.posts);

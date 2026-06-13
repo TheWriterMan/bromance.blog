@@ -12,10 +12,9 @@ function isTableMissingError(error: any): boolean {
 
 export async function POST(req: NextRequest) {
   // Auth check
-  const cookie = req.cookies.get('cms_logged_in')?.value;
-  if (cookie !== 'true') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { requireAuth } = await import('@/lib/auth');
+  const denied = requireAuth(req);
+  if (denied) return denied;
 
   try {
     const formData = await req.formData();

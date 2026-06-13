@@ -14,15 +14,14 @@ export const dynamic = 'force-dynamic';
  * local migration script (scripts/migrate-medium-to-cloudinary.ts).
  * This only registers images that are ALREADY in Cloudinary but missing from media_items.
  *
- * Protected: requires cms_logged_in cookie.
+ * Protected: requires CMS session cookie.
  * Idempotent: safe to run multiple times.
  */
 export async function POST(req: NextRequest) {
   // Auth check
-  const cookie = req.cookies.get('cms_logged_in')?.value;
-  if (cookie !== 'true') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { requireAuth } = await import('@/lib/auth');
+  const denied = requireAuth(req);
+  if (denied) return denied;
 
   try {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '';

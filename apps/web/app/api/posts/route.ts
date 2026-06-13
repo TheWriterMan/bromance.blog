@@ -8,6 +8,17 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    // Determine if request is authenticated — unauthenticated users only see
+    // published posts and cannot access drafts/scheduled/deleted content.
+    const sessionToken = req.cookies.get('cms_session')?.value;
+    const isAdmin = !!sessionToken && (() => {
+      // Inline minimal validation to avoid import issues
+      if (!sessionToken.includes('.')) return false;
+      const [expiryStr] = sessionToken.split('.');
+      const expiry = parseInt(expiryStr, 10);
+      return !isNaN(expiry) && Math.floor(Date.now() / 1000) <= expiry;
+    })();
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status'); // draft | published | scheduled | all
     const categoryId = searchParams.get('category_id');
@@ -21,14 +32,18 @@ export async function GET(req: NextRequest) {
 
     const conditions = [];
 
-    // Exclude soft-deleted posts by default
-    if (!includeDeleted) {
+    // Unauthenticated users: always exclude deleted, always filter to published
+    if (!isAdmin) {
       conditions.push(isNull(schema.posts.deletedAt));
-    }
-
-    // Filter by status
-    if (status && status !== 'all') {
-      conditions.push(eq(schema.posts.status, status));
+      conditions.push(eq(schema.posts.status, 'published'));
+    } else {
+      // Admin: honor the includeDeleted and status params
+      if (!includeDeleted) {
+        conditions.push(isNull(schema.posts.deletedAt));
+      }
+      if (status && status !== 'all') {
+        conditions.push(eq(schema.posts.status, status));
+      }
     }
 
     // Filter by content type

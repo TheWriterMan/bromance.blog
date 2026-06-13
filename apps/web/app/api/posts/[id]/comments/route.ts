@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, desc } from 'drizzle-orm';
+import { requireAuth } from '@/lib/auth';
 
 function isTableMissingError(error: any): boolean {
   const msg = error?.message || error?.toString() || '';
@@ -94,6 +95,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const { searchParams } = new URL(req.url);

@@ -16,6 +16,15 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const incrementView = searchParams.get('inc_view') === 'true';
 
+    // Determine if request is authenticated
+    const sessionToken = req.cookies.get('cms_session')?.value;
+    const isAdmin = !!sessionToken && (() => {
+      if (!sessionToken.includes('.')) return false;
+      const [expiryStr] = sessionToken.split('.');
+      const expiry = parseInt(expiryStr, 10);
+      return !isNaN(expiry) && Math.floor(Date.now() / 1000) <= expiry;
+    })();
+
     // Query post by database id or slug URL parameter
     const matchedPosts = await db
       .select()
@@ -31,6 +40,11 @@ export async function GET(
     }
 
     const post = matchedPosts[0];
+
+    // Non-admin users cannot view drafts or scheduled posts
+    if (!isAdmin && post.status !== 'published') {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
 
     // Fire category, tags queries in parallel
     const [categoriesList, joinedTags] = await Promise.all([

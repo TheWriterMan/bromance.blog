@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, generateId } from '@repo/db';
 import * as schema from '@repo/db';
 import { eq, desc, and } from 'drizzle-orm';
+import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,9 @@ export async function GET(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   const params = await props.params;
   try {
     const id = params.id;
@@ -39,6 +43,9 @@ export async function POST(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
+
   const params = await props.params;
   try {
     const id = params.id;

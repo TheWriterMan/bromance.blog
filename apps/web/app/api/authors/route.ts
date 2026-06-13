@@ -47,10 +47,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const cookie = req.cookies.get('cms_logged_in')?.value;
-  if (cookie !== 'true') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { requireAuth } = await import('@/lib/auth');
+  const denied = requireAuth(req);
+  if (denied) return denied;
 
   try {
     const data = await req.json();

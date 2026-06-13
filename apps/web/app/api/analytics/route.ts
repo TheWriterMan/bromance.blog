@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@repo/db';
 import * as schema from '@repo/db';
 import { isNull } from 'drizzle-orm';
+import { requireAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const posts = await db.select().from(schema.posts).where(isNull(schema.posts.deletedAt));
     const categories = await db.select().from(schema.categories).where(isNull(schema.categories.deletedAt));
