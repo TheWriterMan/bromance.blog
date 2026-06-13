@@ -214,6 +214,8 @@ export async function POST(req: NextRequest) {
           await tx`TRUNCATE post_tags, post_likes, comments, post_revisions CASCADE`;
           await tx`TRUNCATE posts CASCADE`;
           await tx`TRUNCATE categories, tags, media_items, authors, redirects, settings CASCADE`;
+          // Truncate backups separately — we'll re-insert the safety backup after restoring.
+          await tx`TRUNCATE backups CASCADE`;
 
           // Parse the dump into individual INSERT statements. We can't split on
           // newlines or on ";" naively because string/JSON values may contain
@@ -226,6 +228,16 @@ export async function POST(req: NextRequest) {
           for (const stmt of statements) {
             await tx.unsafe(stmt);
           }
+
+          // Re-insert the safety backup record so it's visible on the backups
+          // page after restore. The file already exists on Cloudinary — this
+          // ensures the DB knows about it regardless of what the restored dump
+          // contained.
+          await tx`
+            INSERT INTO backups (id, cloudinary_id, filename, bytes, post_count, category_count, tag_count, media_count, created_at)
+            VALUES (${generateId()}, ${safetyPublicId}, ${safetyFilename}, ${safetyBuffer.length}, ${countRow.post_count}, ${countRow.category_count}, ${countRow.tag_count}, ${countRow.media_count}, NOW())
+            ON CONFLICT DO NOTHING
+          `;
         });
       } catch (restoreError) {
         // Transaction rolled back by postgres.js — nothing changed

@@ -10,24 +10,85 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Check for changes since last backup
+        id: changes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Get current counts and latest updated_at timestamps
+          CURRENT=$(psql "$DATABASE_URL" -t -A -F'|' -c "
+            SELECT
+              (SELECT count(*) FROM posts WHERE deleted_at IS NULL),
+              (SELECT count(*) FROM categories WHERE deleted_at IS NULL),
+              (SELECT count(*) FROM tags),
+              (SELECT count(*) FROM media_items),
+              COALESCE((SELECT MAX(updated_at) FROM posts), '1970-01-01'::timestamptz),
+              COALESCE((SELECT MAX(created_at) FROM comments), '1970-01-01'::timestamptz),
+              COALESCE((SELECT MAX(created_at) FROM post_likes), '1970-01-01'::timestamptz);
+          ")
+
+          CURRENT_POSTS=$(echo "$CURRENT" | cut -d'|' -f1)
+          CURRENT_CATEGORIES=$(echo "$CURRENT" | cut -d'|' -f2)
+          CURRENT_TAGS=$(echo "$CURRENT" | cut -d'|' -f3)
+          CURRENT_MEDIA=$(echo "$CURRENT" | cut -d'|' -f4)
+          LATEST_POST_UPDATE=$(echo "$CURRENT" | cut -d'|' -f5)
+          LATEST_COMMENT=$(echo "$CURRENT" | cut -d'|' -f6)
+          LATEST_LIKE=$(echo "$CURRENT" | cut -d'|' -f7)
+
+          # Get the last backup's counts and timestamp
+          LAST_BACKUP=$(psql "$DATABASE_URL" -t -A -F'|' -c "
+            SELECT post_count, category_count, tag_count, media_count, created_at
+            FROM backups ORDER BY created_at DESC LIMIT 1;
+          ")
+
+          if [ -z "$LAST_BACKUP" ]; then
+            echo "No previous backup found — proceeding."
+            echo "SKIP=false" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          LAST_POSTS=$(echo "$LAST_BACKUP" | cut -d'|' -f1)
+          LAST_CATEGORIES=$(echo "$LAST_BACKUP" | cut -d'|' -f2)
+          LAST_TAGS=$(echo "$LAST_BACKUP" | cut -d'|' -f3)
+          LAST_MEDIA=$(echo "$LAST_BACKUP" | cut -d'|' -f4)
+          LAST_BACKUP_AT=$(echo "$LAST_BACKUP" | cut -d'|' -f5)
+
+          # Check if any activity happened after the last backup
+          ACTIVITY_AFTER=$(psql "$DATABASE_URL" -t -A -c "
+            SELECT CASE WHEN
+              '$LATEST_POST_UPDATE'::timestamptz > '$LAST_BACKUP_AT'::timestamptz OR
+              '$LATEST_COMMENT'::timestamptz > '$LAST_BACKUP_AT'::timestamptz OR
+              '$LATEST_LIKE'::timestamptz > '$LAST_BACKUP_AT'::timestamptz OR
+              $CURRENT_POSTS != $LAST_POSTS OR
+              $CURRENT_CATEGORIES != $LAST_CATEGORIES OR
+              $CURRENT_TAGS != $LAST_TAGS OR
+              $CURRENT_MEDIA != $LAST_MEDIA
+            THEN 'true' ELSE 'false' END;
+          ")
+
+          if [ "$ACTIVITY_AFTER" = "false" ]; then
+            echo "No changes since last backup — skipping."
+            echo "SKIP=true" >> $GITHUB_ENV
+          else
+            echo "Changes detected — proceeding with backup."
+            echo "SKIP=false" >> $GITHUB_ENV
+          fi
 
       - name: Dump database
+        if: env.SKIP != 'true'
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILENAME="backup-${TIMESTAMP}.sql"
-          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only -f "$FILENAME"
+          pg_dump "$DATABASE_URL" --data-only --no-owner --no-privileges -f "$FILENAME"
           gzip "$FILENAME"
           echo "BACKUP_FILE=${FILENAME}.gz" >> $GITHUB_ENV
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
           echo "BACKUP_SIZE=$(stat --printf='%s' ${FILENAME}.gz)" >> $GITHUB_ENV
 
       - name: Upload to Cloudinary
+        if: env.SKIP != 'true'
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
@@ -50,6 +111,7 @@ jobs:
           echo "CLOUDINARY_ID=${CLOUDINARY_ID}" >> $GITHUB_ENV
 
       - name: Record backup metadata
+        if: env.SKIP != 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -75,6 +137,7 @@ jobs:
           "
 
       - name: Cleanup old backups (30+ days)
+        if: env.SKIP != 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
